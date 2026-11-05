@@ -42,7 +42,7 @@ advertencias o parte rechazada; rojo = nada aceptado.
 
 Luego la página muestra:
 
-1. **Veredicto de estructura**: correcta, con advertencias o incorrecta, con la lista de
+1. **Veredicto de estructura**: correcta o con advertencias, con la lista de
    problemas ubicados por archivo y número de línea (eventos desconocidos, líneas sin marca
    de tiempo, horas fuera de orden, mediciones fuera de sesión, estados que no coinciden con
    los umbrales, sesiones sin calibrar o sin cierre).
@@ -51,8 +51,17 @@ Luego la página muestra:
    variante kernel o hexágonos.
 4. **Descargas**: PNG (300 ppp), SVG, PDF, JPG y los datos normalizados en CSV.
 
-El servidor escucha solo en este equipo (`web.host: 127.0.0.1`); los archivos subidos se
-procesan en memoria y no se guardan en disco.
+El servidor escucha solo en este equipo (`web.host: 127.0.0.1`). No guarda nada: los
+archivos subidos se procesan en memoria, y la página los reenvía con cada figura o
+descarga. Cada subida admite hasta `web.max_mb_subida` (4 MB) sumando todos los archivos.
+
+### Publicarla en Vercel
+
+El repositorio ya trae lo necesario: [app.py](app.py) (punto de entrada que Vercel busca)
+y [vercel.json](vercel.json). En [vercel.com](https://vercel.com): *Add New → Project*,
+importar este repositorio de GitHub y *Deploy*, sin cambiar ninguna opción. Cada
+`git push` a `main` vuelve a publicarla. El límite de 4 MB viene de Vercel, que no acepta
+peticiones de más de 4,5 MB.
 
 ## Línea de comandos
 

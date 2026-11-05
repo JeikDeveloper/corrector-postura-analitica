@@ -84,8 +84,7 @@ validacion:
 web:
   host: 127.0.0.1        # solo accesible desde este equipo
   puerto: 8000
-  max_mb_subida: 20
-  max_analisis_en_memoria: 20   # análisis recientes que se conservan para descargas
+  max_mb_subida: 4              # total por subida; Vercel no acepta peticiones de más de 4,5 MB
   max_hallazgos_por_codigo: 50  # hallazgos listados por tipo (el conteo siempre es completo)
   formatos_descarga: [png, svg, pdf, jpg]
 

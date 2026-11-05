@@ -308,11 +308,14 @@
   const $ = (id) => document.getElementById(id);
   const zona = $("zona"), entrada = $("entrada"), botonAnalizar = $("analizar");
   let archivos = [];          // [{ archivo: File, persona: string }]
+  // Copia de lo que se analizó. El servidor no guarda nada: la página reenvía estos
+  // archivos con cada figura y cada descarga.
+  let enviados = [];
   let analisis = null;
   let metodo = "kde";
   let vista = "completo";     // completo | persona | sesion
 
-  const VERSION_API = 4;   // debe coincidir con VERSION_API en web/app.py
+  const VERSION_API = 5;   // debe coincidir con VERSION_API en web/app.py
   const NOMBRES_FORMATO ={ png: "PNG (300 ppp)", svg: "SVG", pdf: "PDF", jpg: "JPG" };
   const VEREDICTOS = {
     correcta: ["✓", "Estructura correcta", "El archivo cumple el formato esperado."],
@@ -333,6 +336,22 @@
   const plural = (n, uno, varios) => `${fmt(n)} ${n === 1 ? uno : varios}`;
   const tamano = (b) => b < 1024 ? `${b} B` : b < 1048576 ? `${fmt(Math.ceil(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
   const nombrePersona = (persona) => persona ?? "Sin identificar";   // el servidor envía null si no hay
+
+  // Formulario con los archivos analizados (y su persona) más los campos extra.
+  function formulario(extra = {}) {
+    const datos = new FormData();
+    enviados.forEach((a) => { datos.append("archivos", a.archivo, a.archivo.name); datos.append("personas", a.persona); });
+    for (const [k, v] of Object.entries(extra)) datos.append(k, v);
+    return datos;
+  }
+  async function pedir(ruta, extra) {
+    const r = await fetch(ruta, { method: "POST", body: formulario(extra) });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || `Error ${r.status} del servidor.`);
+    }
+    return r;
+  }
 
   // ---------- Selección de archivos ----------
   const EXTENSIONES = [".txt"];   // debe coincidir con validacion.extensiones_permitidas
@@ -427,6 +446,9 @@
         el("div", { class: "det", text: `${detalle} · ${hora}` }),
         ...(rechazados.length ? [el("ul", {}, ...rechazados.map((r) => el("li", { text: `${r.archivo}: ${r.motivo}` })))] : [])));
     banda.hidden = false;
+    notificar(estado, titulo);
+  }
+  function notificar(estado, titulo) {
     const toast = $("toast");
     toast.className = `toast estado-${estado}`;
     toast.replaceChildren(el("span", { class: "marca", text: MARCAS[estado] }), el("span", { text: titulo }));
@@ -449,11 +471,10 @@
       filas: archivos.map((a) => ({ nombre: a.archivo.name, detalle: tamano(a.archivo.size) })),
     });
     botonAnalizar.disabled = true;
-    const datos = new FormData();
-    archivos.forEach((a) => { datos.append("archivos", a.archivo, a.archivo.name); datos.append("personas", a.persona.trim()); });
+    enviados = archivos.map((a) => ({ archivo: a.archivo, persona: a.persona.trim() }));
     const filaRechazo = (x) => ({ nombre: x.archivo, detalle: x.motivo, estado: "error" });
     try {
-      const r = await fetch("/api/analizar", { method: "POST", body: datos });
+      const r = await fetch("/api/analizar", { method: "POST", body: formulario() });
       const j = await r.json().catch(() => ({ error: `Respuesta inesperada del servidor (${r.status}).` }));
       // Las respuestas propias del análisis (200 y 422) traen la versión; los errores genéricos no.
       if ((r.ok || r.status === 422) && j.api !== VERSION_API) {
@@ -577,8 +598,9 @@
       $("sin-calibrar").checked = false;
       $("sin-calibrar").parentElement.hidden = !j.sesiones.some((s) => s.sin_calibrar);
       $("descargas").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
-        ...j.formatos.map((f) => el("a", { class: "boton", "data-formato": f, text: NOMBRES_FORMATO[f] || f.toUpperCase() })),
-        el("a", { class: "boton", href: `/api/datos/${j.id}.csv`, text: "Datos (CSV)" }));
+        ...j.formatos.map((f) => botonDescarga(NOMBRES_FORMATO[f] || f.toUpperCase(),
+          () => [`/api/figura.${f}`, { ...parametros(), descargar: "1" }])),
+        botonDescarga("Datos (CSV)", () => ["/api/datos.csv", {}]));
       cambiarVista("completo");
     }
     $("resultados").hidden = false;
@@ -615,28 +637,61 @@
   }
 
   function parametros() {
-    const p = new URLSearchParams({ metodo });
+    const p = { metodo };
     const v = $("elegido").value;
-    if (vista === "sesion" && v) p.set("sesion", v);
-    if (vista === "persona" && v) p.set("usuario", v);
-    if ($("sin-calibrar").checked) p.set("incluir_sin_calibrar", "1");
+    if (vista === "sesion" && v) p.sesion = v;
+    if (vista === "persona" && v) p.usuario = v;
+    if ($("sin-calibrar").checked) p.incluir_sin_calibrar = "1";
     return p;
   }
 
-  function actualizarFigura() {
+  let pedidoFigura = 0;      // solo se muestra la respuesta del último pedido
+  let urlFigura = null;
+  async function actualizarFigura() {
     if (!analisis) return;
-    const p = parametros();
+    const yo = ++pedidoFigura;
     const lienzo = $("lienzo"), img = $("figura"), estado = $("figura-estado");
     lienzo.classList.add("cargando");
     estado.hidden = false;
     estado.textContent = "Generando figura…";
-    img.onload = () => { lienzo.classList.remove("cargando"); estado.hidden = true; };
-    img.onerror = () => { lienzo.classList.remove("cargando"); estado.textContent = "No se pudo generar la figura. Vuelve a subir el archivo."; };
-    img.src = `/api/figura/${analisis.id}.svg?${p}`;
-    document.querySelectorAll("#descargas a[data-formato]").forEach((a) => {
-      const q = new URLSearchParams(p); q.set("descargar", "1");
-      a.href = `/api/figura/${analisis.id}.${a.dataset.formato}?${q}`;
+    try {
+      const blob = await (await pedir("/api/figura.svg", parametros())).blob();
+      if (yo !== pedidoFigura) return;
+      if (urlFigura) URL.revokeObjectURL(urlFigura);
+      urlFigura = URL.createObjectURL(blob);
+      img.onload = () => { lienzo.classList.remove("cargando"); estado.hidden = true; };
+      img.src = urlFigura;
+    } catch (err) {
+      if (yo !== pedidoFigura) return;
+      lienzo.classList.remove("cargando");
+      estado.textContent = `No se pudo generar la figura. ${err.message}`;
+    }
+  }
+
+  // Botón que pide el archivo al servidor y lo baja con el nombre que este indique.
+  function botonDescarga(texto, destino) {
+    const b = el("button", { type: "button", class: "boton", text: texto });
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      b.textContent = "Preparando…";
+      try {
+        const [ruta, extra] = destino();
+        const r = await pedir(ruta, extra);
+        const nombre = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || "descarga";
+        const url = URL.createObjectURL(await r.blob());
+        const a = el("a", { href: url, download: nombre });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (err) {
+        notificar("error", `No se pudo descargar: ${err.message}`);
+      } finally {
+        b.disabled = false;
+        b.textContent = texto;
+      }
     });
+    return b;
   }
 
   document.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => cambiarVista(b.dataset.vista)));

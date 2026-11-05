@@ -20,12 +20,13 @@ def cliente(config):
     return app.test_client()
 
 
-def _subir(cliente, *nombres, contenido=None):
+def _subir(cliente, *nombres, contenido=None, ruta="/api/analizar", **campos):
+    """POST multipart con los archivos; ``campos`` agrega filtros o personas."""
     if contenido is not None:
         archivos = [(io.BytesIO(contenido), nombres[0])]
     else:
         archivos = [(io.BytesIO((DATOS / n).read_bytes()), n) for n in nombres]
-    return cliente.post("/api/analizar", data={"archivos": archivos}, content_type="multipart/form-data")
+    return cliente.post(ruta, data={"archivos": archivos, **campos}, content_type="multipart/form-data")
 
 
 def test_pagina(cliente):
@@ -39,7 +40,7 @@ def test_referencia_estructura_correcta(cliente):
     j = r.get_json()
     est = j["estructura"]
     # Solo hay un aviso informativo (sin fecha en el nombre), que no cambia el veredicto
-    assert j["api"] == 4
+    assert j["api"] == 5
     assert est["veredicto"] == "correcta"
     assert est["resumen"]["lineas"] == 363 and est["resumen"]["mediciones"] == 347
     assert est["resumen"]["dispositivos"] == ["WLAB CP"]
@@ -68,7 +69,7 @@ def test_archivo_sin_formato_se_rechaza_sin_procesar(cliente):
     r = _subir(cliente, "otro.txt", contenido="hola\nesto no es un registro\n".encode())
     j = r.get_json()
     assert r.status_code == 422
-    assert "id" not in j and "estructura" not in j
+    assert "estructura" not in j
     assert j["rechazados"][0]["archivo"] == "otro.txt"
     assert "marca de tiempo" in j["rechazados"][0]["motivo"]
 
@@ -99,25 +100,36 @@ def test_sin_archivos(cliente):
 
 @pytest.mark.parametrize("formato", ["png", "svg", "pdf", "jpg"])
 def test_descarga_formatos(cliente, formato):
-    clave = _subir(cliente, "referencia.txt").get_json()["id"]
-    r = cliente.get(f"/api/figura/{clave}.{formato}?descargar=1&metodo=hex")
+    r = _subir(cliente, "referencia.txt", ruta=f"/api/figura.{formato}", descargar="1", metodo="hex")
     assert r.status_code == 200
     assert r.data.startswith(FIRMAS[formato])
-    assert "attachment" in r.headers["Content-Disposition"]
+    disposicion = r.headers["Content-Disposition"]
+    assert "attachment" in disposicion and f"densidad_referencia_completo_hex.{formato}" in disposicion
 
 
 def test_figura_por_sesion_y_csv(cliente):
-    j = _subir(cliente, "referencia.txt").get_json()
-    sid = j["sesiones"][0]["sesion_id"]
-    r = cliente.get(f"/api/figura/{j['id']}.svg?sesion={sid}")
+    sid = _subir(cliente, "referencia.txt").get_json()["sesiones"][0]["sesion_id"]
+    r = _subir(cliente, "referencia.txt", ruta="/api/figura.svg", sesion=sid)
     assert r.status_code == 200 and b"n = 80 muestras" in r.data
-    csv = cliente.get(f"/api/datos/{j['id']}.csv")
+    csv = _subir(cliente, "referencia.txt", ruta="/api/datos.csv")
     assert csv.status_code == 200 and csv.data.decode("utf-8-sig").count("\n") == 348
+    assert "mediciones_referencia.csv" in csv.headers["Content-Disposition"]
 
 
-def test_analisis_inexistente(cliente):
-    r = cliente.get("/api/figura/no-existe.png")
+def test_figura_sin_archivos_o_formato_invalido(cliente):
+    r = cliente.post("/api/figura.png", data={}, content_type="multipart/form-data")
+    assert r.status_code == 400 and "archivo" in r.get_json()["error"]
+    r = _subir(cliente, "referencia.txt", ruta="/api/figura.gif")
     assert r.status_code == 404 and "error" in r.get_json()
+    r = _subir(cliente, "x.txt", contenido=b"%PDF-1.4", ruta="/api/datos.csv")
+    assert r.status_code == 400 and "válido" in r.get_json()["error"]
+
+
+def test_subida_demasiado_grande(config):
+    from postura.configuracion import fusionar
+    app = crear_app(fusionar(config, {"web": {"max_mb_subida": 1}}))
+    r = _subir(app.test_client(), "grande.txt", contenido=b"x" * (1024 * 1024 + 10))
+    assert r.status_code == 413 and "1 MB" in r.get_json()["error"]
 
 
 def test_persona_por_archivo_y_filtro(cliente):
@@ -132,7 +144,10 @@ def test_persona_por_archivo_y_filtro(cliente):
     assert [a["persona"] for a in j["por_archivo"]] == ["Ana", None]
     assert [s["persona"] for s in j["sesiones"]] == ["Ana", None]
     assert j["por_archivo"][0]["lineas"] == 5 and j["por_archivo"][0]["mediciones"] == 1
-    svg = cliente.get(f"/api/figura/{j['id']}.svg?usuario=Ana").data
+    svg = cliente.post("/api/figura.svg", data={
+        "archivos": [(io.BytesIO(datos), "a.txt"), (io.BytesIO(datos), "b.txt")],
+        "personas": ["Ana", ""], "usuario": "Ana",
+    }, content_type="multipart/form-data").data
     assert b"persona Ana" in svg and b"n = 1 muestra" in svg
 
 

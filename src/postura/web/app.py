@@ -1,21 +1,24 @@
 """Servidor Flask.
 
 Rutas:
-    GET  /                                  página
-    POST /api/analizar                      sube uno o varios .txt → validación + sesiones
-    GET  /api/figura/<id>.<formato>         figura (png, svg, pdf, jpg); ?descargar=1 la baja como archivo
-    GET  /api/datos/<id>.csv                mediciones normalizadas
+    GET  /                          página
+    POST /api/analizar              sube uno o varios .txt → validación + sesiones
+    POST /api/figura.<formato>      figura (png, svg, pdf, jpg); descargar=1 la baja como archivo
+    POST /api/datos.csv             mediciones normalizadas
 
-Filtros de la figura por query string: sesion, usuario, metodo (kde|hex|auto),
-incluir_sin_calibrar (1/0). Los análisis se guardan en memoria (los más recientes).
+Las tres rutas POST reciben los mismos campos: ``archivos`` y ``personas`` (una por
+archivo). La de figura acepta además los filtros sesion, usuario, metodo
+(kde|hex|auto) e incluir_sin_calibrar (1/0).
+
+El servidor no guarda nada entre peticiones: la página reenvía los archivos con cada
+figura o descarga y se vuelven a analizar. Así funciona igual en un servidor sin
+memoria compartida entre peticiones, como Vercel.
 """
 
 from __future__ import annotations
 
 import re
 import threading
-import uuid
-from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 
@@ -33,29 +36,8 @@ from ..validacion import validar_estructura
 ESTATICOS = Path(__file__).parent / "estatico"
 # Súbala cuando cambie la forma de la respuesta de /api/analizar; la página la compara
 # para avisar si quedó abierto un servidor viejo.
-VERSION_API = 4
+VERSION_API = 5
 _BLOQUEO_FIGURAS = threading.Lock()   # matplotlib no es seguro entre hilos
-
-
-class _Almacen:
-    """Análisis recientes en memoria, con tope de tamaño."""
-
-    def __init__(self, maximo: int) -> None:
-        self.maximo = maximo
-        self._datos: OrderedDict[str, dict] = OrderedDict()
-        self._bloqueo = threading.Lock()
-
-    def guardar(self, valor: dict) -> str:
-        clave = uuid.uuid4().hex
-        with self._bloqueo:
-            self._datos[clave] = valor
-            while len(self._datos) > self.maximo:
-                self._datos.popitem(last=False)
-        return clave
-
-    def obtener(self, clave: str) -> dict | None:
-        with self._bloqueo:
-            return self._datos.get(clave)
 
 
 def _nombre_seguro(texto: str) -> str:
@@ -76,7 +58,6 @@ def crear_app(config: dict | None = None) -> Flask:
     cw = config["web"]
     app = Flask(__name__, static_folder=None)
     app.config["MAX_CONTENT_LENGTH"] = int(cw["max_mb_subida"]) * 1024 * 1024
-    almacen = _Almacen(int(cw["max_analisis_en_memoria"]))
     formatos = [f for f in cw["formatos_descarga"] if f in TIPOS_MIME]
 
     @app.get("/")
@@ -85,18 +66,19 @@ def crear_app(config: dict | None = None) -> Flask:
 
     @app.errorhandler(413)
     def demasiado_grande(_):
-        return jsonify(error=f"El archivo supera el máximo de {cw['max_mb_subida']} MB."), 413
+        return jsonify(error=f"La subida supera el máximo de {cw['max_mb_subida']} MB "
+                             "(sumando todos los archivos)."), 413
 
     @app.errorhandler(400)
     @app.errorhandler(404)
     def error_api(e):
         return jsonify(error=e.description), e.code
 
-    @app.post("/api/analizar")
-    def analizar():
+    def _ingerir_subida():
+        """Lee archivos y personas del formulario y los ingiere. → (resultado, cfg)."""
         subidos = [f for f in request.files.getlist("archivos") if f and f.filename]
         if not subidos:
-            return jsonify(error="No se recibió ningún archivo."), 400
+            abort(400, description="No se recibió ningún archivo.")
         contenidos = [(Path(f.filename).name, f.read()) for f in subidos]
         # Persona opcional por archivo (mismo orden que los archivos). Vacía → se resuelve
         # con el patrón del nombre de archivo o queda sin identificar.
@@ -104,9 +86,24 @@ def crear_app(config: dict | None = None) -> Flask:
         mapa = {nombre: persona for (nombre, _), persona
                 in zip(contenidos, map(_persona_segura, personas)) if persona}
         cfg = fusionar(config, {"usuarios": {"mapa_archivos": mapa}}) if mapa else config
+        return ingerir_contenidos(contenidos, cfg), cfg
 
+    def _mediciones_subidas():
+        """Figura y CSV: mediciones de los archivos reenviados y nombre base de la descarga."""
         try:
-            resultado = ingerir_contenidos(contenidos, cfg)
+            resultado, _ = _ingerir_subida()
+        except ErrorEsquema as error:
+            abort(400, description=f"No se pudo normalizar el registro: {error}")
+        if not resultado.parseos:
+            abort(400, description="Ninguno de los archivos es un registro válido del corrector.")
+        nombres = [r.archivo for r in resultado.parseos]
+        nombre = _nombre_seguro(Path(nombres[0]).stem if len(nombres) == 1 else f"{len(nombres)}_archivos")
+        return resultado.mediciones, nombre
+
+    @app.post("/api/analizar")
+    def analizar():
+        try:
+            resultado, cfg = _ingerir_subida()
         except ErrorEsquema as error:
             return jsonify(api=VERSION_API, error=f"No se pudo normalizar el registro: {error}"), 422
         rechazados = [asdict(r) for r in resultado.rechazados]
@@ -128,14 +125,8 @@ def crear_app(config: dict | None = None) -> Flask:
             """Nombre visible de la persona; None si quedó sin identificar."""
             return None if usuario_id == sin_identificar else usuario_id
 
-        nombres = [r.archivo for r in resultado.parseos]
-        clave = almacen.guardar({
-            "mediciones": med,
-            "nombre": _nombre_seguro(Path(nombres[0]).stem if len(nombres) == 1 else f"{len(nombres)}_archivos"),
-        })
         return jsonify(
             api=VERSION_API,
-            id=clave,
             rechazados=rechazados,
             estructura=estructura.a_dict(),
             n_analizables=int(analizables.sum()),
@@ -172,18 +163,11 @@ def crear_app(config: dict | None = None) -> Flask:
             graficable=bool(len(med)),
         )
 
-    def _analisis(clave: str) -> dict:
-        datos = almacen.obtener(clave)
-        if datos is None:
-            abort(404, description="Análisis no encontrado o expirado; vuelva a subir el archivo.")
-        return datos
-
-    @app.get("/api/figura/<clave>.<formato>")
-    def figura(clave: str, formato: str):
+    @app.post("/api/figura.<formato>")
+    def figura(formato: str):
         if formato not in formatos:
             abort(404, description=f"Formato no disponible: {formato}")
-        datos = _analisis(clave)
-        args = request.args
+        args = request.form
         metodo = args.get("metodo") or None
         if metodo not in (None, "kde", "hex", "auto"):
             abort(400, description="metodo debe ser kde, hex o auto")
@@ -192,8 +176,9 @@ def crear_app(config: dict | None = None) -> Flask:
             cfg = fusionar(config, {"sesiones": {"incluir_sin_calibrar": True}})
         sesion = args.get("sesion") or None
         usuario = args.get("usuario") or None
+        mediciones, nombre_base = _mediciones_subidas()
         with _BLOQUEO_FIGURAS:
-            r = figura_densidad(datos["mediciones"], cfg,
+            r = figura_densidad(mediciones, cfg,
                                 usuario=usuario, sesion=sesion, metodo=metodo)
             try:
                 contenido = exportar(r.figura, formato, cfg)
@@ -203,18 +188,18 @@ def crear_app(config: dict | None = None) -> Flask:
         respuesta.headers["Cache-Control"] = "no-store"
         if args.get("descargar") == "1":
             sufijo = _nombre_seguro(sesion or usuario or "completo")
-            nombre = f"densidad_{datos['nombre']}_{sufijo}_{r.metodo}.{formato}"
+            nombre = f"densidad_{nombre_base}_{sufijo}_{r.metodo}.{formato}"
             respuesta.headers["Content-Disposition"] = f'attachment; filename="{nombre}"'
         return respuesta
 
-    @app.get("/api/datos/<clave>.csv")
-    def datos_csv(clave: str):
-        datos = _analisis(clave)
-        csv = datos["mediciones"].to_csv(index=False, date_format="%H:%M:%S.%f")
+    @app.post("/api/datos.csv")
+    def datos_csv():
+        mediciones, nombre_base = _mediciones_subidas()
+        csv = mediciones.to_csv(index=False, date_format="%H:%M:%S.%f")
         return Response(
             csv.encode("utf-8-sig"),  # BOM para que Excel lea bien los acentos
             mimetype="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="mediciones_{datos["nombre"]}.csv"'},
+            headers={"Content-Disposition": f'attachment; filename="mediciones_{nombre_base}.csv"'},
         )
 
     return app
