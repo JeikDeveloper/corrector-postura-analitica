@@ -1,0 +1,1 @@
+"""Figuras del proyecto."""

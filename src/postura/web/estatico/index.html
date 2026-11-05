@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analítica de postura</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%233b528b'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%23fde725'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --fondo: #f6f7f9;
+    --superficie: #ffffff;
+    --borde: #e3e6ea;
+    --texto: #1f2328;
+    --texto-2: #59636e;
+    --texto-3: #818b98;
+    --acento: #3b528b;
+    --acento-suave: #eef1f8;
+    --ok: #1a7f37;      --ok-fondo: #e9f6ec;
+    --aviso: #9a6700;   --aviso-fondo: #fff6dd;
+    --error: #c2410c;   --error-fondo: #fdeee6;
+    --info: #59636e;    --info-fondo: #f0f2f4;
+    --sombra: 0 1px 2px rgba(31,35,40,.06), 0 1px 3px rgba(31,35,40,.04);
+    --radio: 10px;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fondo: #0f1215; --superficie: #171b20; --borde: #2a3038;
+      --texto: #e6e9ed; --texto-2: #a5aeb8; --texto-3: #7d8792;
+      --acento: #8ea6dd; --acento-suave: #1e2533;
+      --ok: #4ac26b; --ok-fondo: #12261a;
+      --aviso: #d9a91a; --aviso-fondo: #2a2210;
+      --error: #f0855a; --error-fondo: #2c1810;
+      --info: #a5aeb8; --info-fondo: #20252b;
+      --sombra: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+  header h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  header p { margin: 0 0 24px; color: var(--texto-2); }
+  .tarjeta {
+    background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+    box-shadow: var(--sombra); padding: 20px; margin-bottom: 16px;
+  }
+  .tarjeta h2 { font-size: 16px; margin: 0 0 12px; }
+  .tarjeta h2 small { font-weight: 400; color: var(--texto-3); margin-left: 6px; }
+
+  /* Subida */
+  .zona {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    border: 1.5px dashed var(--borde); border-radius: var(--radio); padding: 32px 16px;
+    text-align: center; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .zona:hover, .zona.encima { border-color: var(--acento); background: var(--acento-suave); }
+  .zona strong { font-size: 15px; }
+  .zona span { color: var(--texto-2); font-size: 13px; }
+  .zona input { display: none; }
+  .fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .archivos { margin: 14px 0 0; font-size: 13px; }
+  .archivos-cabecera, .fila-archivo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) auto; gap: 10px; align-items: center; }
+  .archivos-cabecera { color: var(--texto-2); font-weight: 600; padding: 0 2px 6px; border-bottom: 1px solid var(--borde); }
+  .archivos-cabecera small { font-weight: 400; color: var(--texto-3); }
+  .fila-archivo { padding: 8px 2px; border-bottom: 1px solid var(--borde); }
+  .fila-archivo .nombre { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .fila-archivo .nombre code { font-family: var(--mono); color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fila-archivo .tam { color: var(--texto-3); white-space: nowrap; }
+  .fila-archivo input { font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); width: 100%; }
+  .fila-archivo input:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+  .quitar { border: 0; padding: 4px 8px; color: var(--texto-3); background: transparent; }
+  .quitar:hover { color: var(--error); }
+  .icono-archivo { flex: none; width: 22px; height: 26px; border-radius: 4px; background: var(--acento-suave); color: var(--acento); font-size: 9px; font-weight: 700; display: grid; place-items: center; }
+
+  /* Modal */
+  dialog#modal { border: 1px solid var(--borde); border-radius: 14px; padding: 0; width: min(460px, calc(100vw - 32px)); background: var(--superficie); color: var(--texto); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  dialog#modal::backdrop { background: rgba(15,18,21,.45); }
+  .modal-cuerpo { padding: 24px 24px 8px; text-align: center; }
+  .modal-icono { width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: #fff; }
+  .modal-icono.ok { background: var(--ok); }
+  .modal-icono.aviso { background: var(--aviso); }
+  .modal-icono.error { background: var(--error); }
+  .modal-icono.cargando { border: 4px solid var(--acento-suave); border-top-color: var(--acento); animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .modal-icono.cargando { animation-duration: 3s; } }
+  .modal-cuerpo h3 { margin: 0 0 4px; font-size: 18px; }
+  .modal-cuerpo > p { margin: 0 0 14px; color: var(--texto-2); }
+  .modal-archivos { text-align: left; border: 1px solid var(--borde); border-radius: 10px; margin: 0 0 12px; }
+  .modal-archivo { padding: 10px 12px; }
+  .modal-archivo + .modal-archivo { border-top: 1px solid var(--borde); }
+  .modal-archivo .nom { font-family: var(--mono); font-size: 13px; word-break: break-all; }
+  .modal-archivo .det { font-size: 12px; color: var(--texto-2); margin-top: 2px; }
+  .modal-pie { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px 20px; }
+  button, .boton {
+    font: inherit; font-size: 14px; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover, .boton:hover { border-color: var(--acento); }
+  button.primario { background: var(--acento); border-color: var(--acento); color: #fff; }
+  @media (prefers-color-scheme: dark) { button.primario { color: #0f1215; } }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .acciones { margin-top: 16px; justify-content: space-between; }
+  details.formato { font-size: 13px; color: var(--texto-2); }
+  details.formato summary { cursor: pointer; }
+  details.formato pre {
+    font-family: var(--mono); font-size: 12px; background: var(--fondo); border: 1px solid var(--borde);
+    border-radius: 8px; padding: 10px 12px; overflow-x: auto; color: var(--texto);
+  }
+
+  /* Veredicto */
+  .veredicto { display: flex; gap: 14px; align-items: flex-start; border-radius: var(--radio); padding: 16px 18px; margin-bottom: 16px; border: 1px solid transparent; }
+  .veredicto .icono { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; }
+  .veredicto h2 { margin: 0 0 2px; font-size: 17px; }
+  .veredicto p { margin: 0; color: var(--texto-2); }
+  .v-correcta { background: var(--ok-fondo); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+  .v-correcta .icono { background: var(--ok); }
+  .v-con_advertencias { background: var(--aviso-fondo); border-color: color-mix(in srgb, var(--aviso) 30%, transparent); }
+  .v-con_advertencias .icono { background: var(--aviso); }
+
+  /* Cifras */
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .cifra { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px 16px; box-shadow: var(--sombra); }
+  .cifra .valor { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .cifra .rotulo { font-size: 13px; color: var(--texto-2); }
+
+  /* Tablas */
+  .tabla-env { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: var(--texto-2); border-bottom: 1px solid var(--borde); padding: 6px 10px; white-space: nowrap; }
+  td { border-bottom: 1px solid var(--borde); padding: 7px 10px; vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  tr:last-child td { border-bottom: 0; }
+  code.lit { font-family: var(--mono); font-size: 12px; background: var(--fondo); padding: 1px 5px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip.advertencia { color: var(--aviso); background: var(--aviso-fondo); }
+  .chip.info { color: var(--info); background: var(--info-fondo); }
+  .chip.ok { color: var(--ok); background: var(--ok-fondo); }
+  .resumen-hallazgos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .resumen-hallazgos .chip { white-space: normal; }
+  .tabla-env table { min-width: 680px; }
+  main, .tarjeta { min-width: 0; }
+  .nota { font-size: 13px; color: var(--texto-3); margin: 10px 0 0; }
+
+  /* Figura */
+  .controles { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-bottom: 14px; }
+  .control { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--texto-2); }
+  select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--borde); background: var(--superficie); color: var(--texto); max-width: 100%; }
+  .segmentado { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+  .segmentado button { border: 0; border-radius: 0; padding: 7px 12px; }
+  .segmentado button + button { border-left: 1px solid var(--borde); }
+  .segmentado button[aria-pressed="true"] { background: var(--acento-suave); color: var(--acento); font-weight: 600; }
+  label.casilla { flex-direction: row; align-items: center; gap: 6px; color: var(--texto); padding-bottom: 8px; }
+  .lienzo { position: relative; background: #fff; border: 1px solid var(--borde); border-radius: 8px; min-height: 240px; display: grid; place-items: center; overflow: hidden; }
+  .lienzo img { width: 100%; height: auto; display: block; }
+  .lienzo.cargando img { opacity: .35; }
+  .lienzo .estado { position: absolute; color: #59636e; font-size: 14px; }
+  .descargas { margin-top: 14px; }
+  .descargas .rotulo { font-size: 13px; color: var(--texto-2); margin-right: 4px; }
+  /* Avisos de subida: verde (todo bien), amarillo (parcial o con advertencias), rojo (rechazado) */
+  .estado-ok    { --c: var(--ok);    --cf: var(--ok-fondo); }
+  .estado-aviso { --c: var(--aviso); --cf: var(--aviso-fondo); }
+  .estado-error { --c: var(--error); --cf: var(--error-fondo); }
+  .aviso-subida { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+    background: var(--cf); border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); }
+  .aviso-subida strong { color: var(--c); }
+  .aviso-subida .det { font-size: 13px; color: var(--texto-2); word-break: break-word; }
+  .aviso-subida ul { margin: 4px 0 0; padding-left: 18px; font-size: 13px; color: var(--texto-2); }
+  .marca { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; display: flex; gap: 10px; align-items: center;
+    max-width: calc(100vw - 32px); padding: 12px 16px; border-radius: 10px; font-weight: 600;
+    background: var(--cf); color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+    box-shadow: 0 8px 24px rgba(0,0,0,.18); opacity: 0; transform: translateY(8px); transition: opacity .25s, transform .25s; }
+  .modal-archivo.ok .nom::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  .modal-archivo.error { background: var(--error-fondo); }
+  .modal-archivo.error .nom::before { content: "✕ "; color: var(--error); font-weight: 700; }
+  .modal-archivo.error .det { color: var(--error); }
+  .modal-seccion { font-size: 12px; font-weight: 600; color: var(--texto-2); text-align: left; margin: 0 0 6px; }
+  .toast.visible { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  .modal-veredicto { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0 0 14px; font-size: 13px; color: var(--texto-2); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Analítica del corrector de postura</h1>
+    <p>Sube uno o varios registros del dispositivo. Se valida su estructura, se reconstruyen las sesiones y se genera el mapa de densidad postural.</p>
+  </header>
+
+  <section class="tarjeta">
+    <h2>1 · Subir registro</h2>
+    <label class="zona" id="zona">
+      <input type="file" id="entrada" accept=".txt,text/plain" multiple>
+      <strong>Arrastra aquí el archivo .txt o haz clic para elegirlo</strong>
+      <span>UTF-8, una línea por evento. Puedes subir varios archivos a la vez.</span>
+    </label>
+    <div class="archivos" id="lista-archivos" hidden>
+      <div class="archivos-cabecera">
+        <span>Archivo seleccionado</span>
+        <span>Persona <small>(opcional)</small></span>
+      </div>
+      <div id="filas-archivos"></div>
+      <p class="nota">El registro no trae quién lo usó. Escribe un nombre o código (p. ej. U01) para poder filtrar el diagrama por persona; si lo dejas vacío queda como «Sin identificar».</p>
+    </div>
+    <div class="aviso-subida estado-error" id="descartados" role="alert" hidden></div>
+    <div class="aviso-subida" id="subida-ok" role="status" hidden></div>
+    <div class="fila acciones">
+      <details class="formato">
+        <summary>Ver el formato esperado</summary>
+        <pre>16:15:21.161 Connected
+16:15:22.927 CALIBRADO
+16:15:23.487 F = 2º, L = 2º, BIEN
+16:17:05.820 F = - 2º, L = 0º, BIEN
+16:18:06.290 F = -14º, L = 9º, MAL
+16:20:18.822 Disconnected</pre>
+        Eventos reconocidos: <code>Connecting to &lt;NOMBRE&gt; ...</code>, <code>Connected</code>, <code>CALIBRADO</code>,
+        <code>APAGADO</code>, <code>Disconnected</code>, <code>Connection lost</code>, <code>Connection failed: gatt status &lt;N&gt;</code>.
+      </details>
+      <button class="primario" id="analizar" disabled>Analizar</button>
+    </div>
+  </section>
+
+  <section id="resultados" hidden>
+    <div class="veredicto" id="veredicto">
+      <div class="icono" id="veredicto-icono"></div>
+      <div><h2 id="veredicto-titulo"></h2><p id="veredicto-texto"></p></div>
+    </div>
+
+    <div class="cifras" id="cifras"></div>
+
+    <section class="tarjeta" id="tarjeta-hallazgos">
+      <h2>2 · Validación de estructura <small id="hallazgos-sub"></small></h2>
+      <div class="resumen-hallazgos" id="resumen-hallazgos"></div>
+      <div class="tabla-env" id="tabla-hallazgos-env">
+        <table>
+          <thead><tr><th>Tipo</th><th>Archivo</th><th class="num">Línea</th><th>Problema</th><th>Texto de la línea</th></tr></thead>
+          <tbody id="tabla-hallazgos"></tbody>
+        </table>
+      </div>
+      <p class="nota" id="nota-hallazgos" hidden></p>
+    </section>
+
+    <section class="tarjeta">
+      <h2>3 · Sesiones detectadas</h2>
+      <div class="tabla-env">
+        <table>
+          <thead><tr>
+            <th>Sesión</th><th>Dispositivo</th><th>Inicio</th><th>Fin</th><th class="num">Duración</th>
+            <th class="num">Muestras</th><th class="num">Precalibración</th><th>Cierre</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="tabla-sesiones"></tbody>
+        </table>
+      </div>
+      <p class="nota">Los ángulos son relativos a la calibración de cada sesión: dos sesiones no son comparables en términos absolutos.</p>
+    </section>
+
+    <section class="tarjeta" id="tarjeta-figura">
+      <h2>4 · Mapa de densidad postural</h2>
+      <div class="controles">
+        <div class="control">Mostrar
+          <div class="segmentado" role="group" aria-label="Mostrar">
+            <button type="button" data-vista="completo" aria-pressed="true">Conjunto completo</button>
+            <button type="button" data-vista="persona" aria-pressed="false">Por persona</button>
+            <button type="button" data-vista="sesion" aria-pressed="false">Por sesión</button>
+          </div>
+        </div>
+        <label class="control" id="control-elegido" hidden><span id="rotulo-elegido">Persona</span>
+          <select id="elegido"></select>
+        </label>
+        <div class="control">Método
+          <div class="segmentado" role="group" aria-label="Método">
+            <button type="button" data-metodo="kde" aria-pressed="true">Densidad kernel</button>
+            <button type="button" data-metodo="hex" aria-pressed="false">Hexágonos</button>
+          </div>
+        </div>
+        <label class="control casilla"><input type="checkbox" id="sin-calibrar"> Incluir sesiones sin calibrar</label>
+      </div>
+      <div class="lienzo" id="lienzo">
+        <img id="figura" alt="Mapa de densidad conjunta de los ángulos lateral y frontal">
+        <span class="estado" id="figura-estado">Generando figura…</span>
+      </div>
+      <p class="nota" id="nota-alcance" hidden></p>
+      <div class="fila descargas" id="descargas"><span class="rotulo">Descargar:</span></div>
+    </section>
+  </section>
+</main>
+
+<dialog id="modal" aria-labelledby="modal-titulo">
+  <div class="modal-cuerpo">
+    <div class="modal-icono" id="modal-icono" aria-hidden="true"></div>
+    <h3 id="modal-titulo"></h3>
+    <p id="modal-texto"></p>
+    <div class="modal-veredicto" id="modal-veredicto" hidden></div>
+    <div id="modal-archivos" hidden></div>
+  </div>
+  <div class="modal-pie" id="modal-pie"></div>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const zona = $("zona"), entrada = $("entrada"), botonAnalizar = $("analizar");
+  let archivos = [];          // [{ archivo: File, persona: string }]
+  let analisis = null;
+  let metodo = "kde";
+  let vista = "completo";     // completo | persona | sesion
+
+  const VERSION_API = 4;   // debe coincidir con VERSION_API en web/app.py
+  const NOMBRES_FORMATO ={ png: "PNG (300 ppp)", svg: "SVG", pdf: "PDF", jpg: "JPG" };
+  const VEREDICTOS = {
+    correcta: ["✓", "Estructura correcta", "El archivo cumple el formato esperado."],
+    con_advertencias: ["!", "Estructura con advertencias", "Se pudo analizar, pero hay líneas o sesiones que no cumplen el formato. Revísalas abajo."],
+  };
+  const SEVERIDAD_TXT = { advertencia: "Advertencia", info: "Info" };
+  const CIERRES = { apagado: "APAGADO", desconectado: "Disconnected", conexion_perdida: "Connection lost", implicito: "Sin cierre" };
+
+  function el(tag, props = {}, ...hijos) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const h of hijos) n.append(h);
+    return n;
+  }
+  const fmt = (n) => Number(n).toLocaleString("es");
+  const plural = (n, uno, varios) => `${fmt(n)} ${n === 1 ? uno : varios}`;
+  const tamano = (b) => b < 1024 ? `${b} B` : b < 1048576 ? `${fmt(Math.ceil(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
+  const nombrePersona = (persona) => persona ?? "Sin identificar";   // el servidor envía null si no hay
+
+  // ---------- Selección de archivos ----------
+  const EXTENSIONES = [".txt"];   // debe coincidir con validacion.extensiones_permitidas
+  function agregar(lista) {
+    const descartados = [];
+    for (const f of lista) {
+      const ext = (f.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+      if (!EXTENSIONES.includes(ext)) { descartados.push(f.name); continue; }
+      if (!archivos.some((a) => a.archivo.name === f.name && a.archivo.size === f.size)) archivos.push({ archivo: f, persona: "" });
+    }
+    const caja = $("descartados");
+    caja.hidden = descartados.length === 0;
+    if (descartados.length) {
+      caja.replaceChildren(el("span", { class: "marca", text: "✕" }), el("div", {},
+        el("strong", { text: descartados.length === 1 ? "Se descartó 1 archivo" : `Se descartaron ${descartados.length} archivos` }),
+        el("div", { class: "det", text: `Solo se aceptan registros ${EXTENSIONES.join(", ")} del corrector: ${descartados.join(", ")}` })));
+    }
+    pintarArchivos();
+  }
+
+  function pintarArchivos() {
+    $("subida-ok").hidden = true;   // la lista cambió: lo de abajo aún no se ha subido
+    $("lista-archivos").hidden = archivos.length === 0;
+    $("filas-archivos").replaceChildren(...archivos.map((a, i) => {
+      const entradaPersona = el("input", { type: "text", maxlength: "60", placeholder: "Sin identificar", "aria-label": `Persona de ${a.archivo.name}` });
+      entradaPersona.value = a.persona;
+      entradaPersona.addEventListener("input", () => { a.persona = entradaPersona.value; });
+      const quitar = el("button", { type: "button", class: "quitar", title: "Quitar archivo", "aria-label": `Quitar ${a.archivo.name}`, text: "✕" });
+      quitar.addEventListener("click", () => { archivos.splice(i, 1); pintarArchivos(); });
+      return el("div", { class: "fila-archivo" },
+        el("div", { class: "nombre" }, el("span", { class: "icono-archivo", text: "TXT" }),
+          el("code", { text: a.archivo.name, title: a.archivo.name }), el("span", { class: "tam", text: tamano(a.archivo.size) })),
+        entradaPersona, quitar);
+    }));
+    botonAnalizar.disabled = archivos.length === 0;
+    botonAnalizar.textContent = archivos.length > 1 ? `Analizar ${archivos.length} archivos` : "Analizar";
+  }
+
+  entrada.addEventListener("change", () => { agregar(entrada.files); entrada.value = ""; });
+  ["dragenter", "dragover"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.add("encima"); }));
+  ["dragleave", "drop"].forEach((t) => zona.addEventListener(t, (e) => { e.preventDefault(); zona.classList.remove("encima"); }));
+  zona.addEventListener("drop", (e) => agregar(e.dataTransfer.files));
+
+  // ---------- Modal ----------
+  const modal = $("modal");
+  modal.addEventListener("cancel", (e) => { if (modal.dataset.estado === "cargando") e.preventDefault(); });
+
+  function abrirModal({ estado, titulo, texto, veredicto = null, filas = [], botones = [] }) {
+    modal.dataset.estado = estado;
+    const icono = $("modal-icono");
+    icono.className = `modal-icono ${estado}`;
+    icono.textContent = { ok: "✓", aviso: "!", error: "✕", cargando: "" }[estado];
+    $("modal-titulo").textContent = titulo;
+    $("modal-texto").textContent = texto;
+    const mv = $("modal-veredicto");
+    mv.hidden = !veredicto;
+    if (veredicto) {
+      const clase = veredicto === "correcta" ? "ok" : "advertencia";
+      mv.replaceChildren(el("span", { class: `chip ${clase}`, text: `${VEREDICTOS[veredicto][0]} ${VEREDICTOS[veredicto][1]}` }),
+        el("span", { text: VEREDICTOS[veredicto][2] }));
+    }
+    // filas: [{ nombre, detalle, estado: "ok" | "error" | "" }]; se agrupan en aceptados y rechazados
+    const cont = $("modal-archivos");
+    cont.hidden = filas.length === 0;
+    const grupo = (titulo, lista) => lista.length ? [
+      ...(titulo ? [el("p", { class: "modal-seccion", text: titulo })] : []),
+      el("div", { class: "modal-archivos" }, ...lista.map((f) => el("div", { class: `modal-archivo ${f.estado || ""}` },
+        el("div", { class: "nom", text: f.nombre }), el("div", { class: "det", text: f.detalle })))),
+    ] : [];
+    const ok = filas.filter((f) => f.estado !== "error"), mal = filas.filter((f) => f.estado === "error");
+    const ambos = ok.length && mal.length;
+    cont.replaceChildren(...grupo(ambos ? "Procesados" : "", ok), ...grupo(ambos ? "Rechazados (no se procesaron)" : "", mal));
+    $("modal-pie").replaceChildren(...botones.map(([texto, clase, accion]) => {
+      const b = el("button", { type: "button", class: clase, text: texto });
+      b.addEventListener("click", accion);
+      return b;
+    }));
+    if (!modal.open) modal.showModal();
+    modal.querySelector(".modal-pie button")?.focus();
+  }
+  const cerrarModal = () => modal.close();
+
+  // ---------- Avisos de subida (banda fija + notificación) ----------
+  const MARCAS = { ok: "✓", aviso: "!", error: "✕" };
+  let temporizadorToast = null;
+  function avisarSubida(estado, titulo, detalle, rechazados = []) {
+    const hora = new Date().toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const banda = $("subida-ok");
+    banda.className = `aviso-subida estado-${estado}`;
+    banda.replaceChildren(el("span", { class: "marca", text: MARCAS[estado] }),
+      el("div", {}, el("strong", { text: titulo }),
+        el("div", { class: "det", text: `${detalle} · ${hora}` }),
+        ...(rechazados.length ? [el("ul", {}, ...rechazados.map((r) => el("li", { text: `${r.archivo}: ${r.motivo}` })))] : [])));
+    banda.hidden = false;
+    const toast = $("toast");
+    toast.className = `toast estado-${estado}`;
+    toast.replaceChildren(el("span", { class: "marca", text: MARCAS[estado] }), el("span", { text: titulo }));
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add("visible"));
+    clearTimeout(temporizadorToast);
+    temporizadorToast = setTimeout(() => {
+      toast.classList.remove("visible");
+      setTimeout(() => { toast.hidden = true; }, 250);
+    }, 4000);
+  }
+
+  // ---------- Subida y análisis ----------
+  botonAnalizar.addEventListener("click", async () => {
+    const n = archivos.length;
+    abrirModal({
+      estado: "cargando",
+      titulo: n === 1 ? "Subiendo archivo…" : `Subiendo ${n} archivos…`,
+      texto: "Se está validando la estructura y reconstruyendo las sesiones.",
+      filas: archivos.map((a) => ({ nombre: a.archivo.name, detalle: tamano(a.archivo.size) })),
+    });
+    botonAnalizar.disabled = true;
+    const datos = new FormData();
+    archivos.forEach((a) => { datos.append("archivos", a.archivo, a.archivo.name); datos.append("personas", a.persona.trim()); });
+    const filaRechazo = (x) => ({ nombre: x.archivo, detalle: x.motivo, estado: "error" });
+    try {
+      const r = await fetch("/api/analizar", { method: "POST", body: datos });
+      const j = await r.json().catch(() => ({ error: `Respuesta inesperada del servidor (${r.status}).` }));
+      // Las respuestas propias del análisis (200 y 422) traen la versión; los errores genéricos no.
+      if ((r.ok || r.status === 422) && j.api !== VERSION_API) {
+        const e = new Error("La página se actualizó, pero el servidor que está abierto es una versión anterior. "
+          + "Ciérralo con Ctrl+C en su ventana y vuelve a abrirlo (postura web o abrir_web.bat).");
+        e.titulo = "Hay que reiniciar el servidor";
+        throw e;
+      }
+      const rechazados = j.rechazados || [];
+      if (!r.ok) {
+        // Nada se procesó: rojo, sin resultados.
+        $("resultados").hidden = true;
+        analisis = null;
+        const titulo = rechazados.length > 1 ? "Ningún archivo se pudo subir" : "Archivo rechazado";
+        avisarSubida("error", titulo, "No se procesó nada", rechazados);
+        abrirModal({
+          estado: "error", titulo, texto: j.error || `Error ${r.status}`,
+          filas: rechazados.map(filaRechazo),
+          botones: [["Cerrar", "", cerrarModal]],
+        });
+        return;
+      }
+      analisis = j;
+      pintar(j);
+      const porArchivo = j.por_archivo || [];
+      const v = j.estructura.veredicto;
+      const na = porArchivo.length;
+      const todoBien = rechazados.length === 0 && v === "correcta";
+      const estado = todoBien ? "ok" : "aviso";
+      const titulo = rechazados.length
+        ? `${na} de ${na + rechazados.length} archivos subidos · ${plural(rechazados.length, "rechazado", "rechazados")}`
+        : v === "correcta"
+          ? (na === 1 ? "Archivo subido correctamente" : `${na} archivos subidos correctamente`)
+          : (na === 1 ? "Archivo subido con advertencias" : `${na} archivos subidos con advertencias`);
+      const texto = rechazados.length
+        ? "Solo se procesaron los archivos válidos. Los rechazados no se tuvieron en cuenta."
+        : v === "correcta" ? (na === 1 ? "Se recibió y se analizó el archivo." : "Se recibieron y se analizaron los archivos.")
+          : "Se analizó, pero hay líneas o sesiones que no cumplen el formato. Revísalas en los resultados.";
+      avisarSubida(estado, titulo, porArchivo.map((a) => a.archivo).join(", "), rechazados);
+      abrirModal({
+        estado, titulo, texto,
+        veredicto: v,
+        filas: [
+          ...porArchivo.map((a) => ({ nombre: a.archivo, estado: "ok", detalle:
+            `${tamano(a.bytes)} · ${plural(a.lineas, "línea", "líneas")} · ${plural(a.mediciones, "medición", "mediciones")} · ${plural(a.sesiones, "sesión", "sesiones")}`
+            + ` · Persona: ${nombrePersona(a.persona)}` })),
+          ...rechazados.map(filaRechazo),
+        ],
+        botones: [["Ver resultados", "primario", () => { cerrarModal(); $("resultados").scrollIntoView({ behavior: "smooth", block: "start" }); }]],
+      });
+    } catch (err) {
+      $("resultados").hidden = true;
+      avisarSubida("error", err.titulo || "No se pudo subir el archivo", err.message || String(err));
+      abrirModal({
+        estado: "error",
+        titulo: err.titulo || "No se pudo subir el archivo",
+        texto: err.message || String(err),
+        botones: [["Cerrar", "", cerrarModal]],
+      });
+    } finally {
+      botonAnalizar.disabled = archivos.length === 0;
+    }
+  });
+
+  // ---------- Resultados ----------
+  function pintar(j) {
+    const est = j.estructura;
+    const [icono, titulo, texto] = VEREDICTOS[est.veredicto];
+    $("veredicto").className = `veredicto v-${est.veredicto}`;
+    $("veredicto-icono").textContent = icono;
+    $("veredicto-titulo").textContent = titulo;
+    $("veredicto-texto").textContent = texto;
+
+    const r = est.resumen;
+    const cifras = [
+      [r.lineas, "Líneas"], [r.mediciones, "Mediciones"], [r.sesiones, "Sesiones"],
+      [j.n_analizables, "Analizables (post-calibración)"], [j.n_discrepancias_estado, "Discrepancias de estado"],
+    ];
+    $("cifras").replaceChildren(...cifras.map(([v, t]) => el("div", { class: "cifra" },
+      el("div", { class: "valor", text: fmt(v) }), el("div", { class: "rotulo", text: t }))));
+
+    const conteo = est.conteo, codigos = Object.keys(conteo);
+    $("hallazgos-sub").textContent = r.dispositivos.length ? `dispositivo ${r.dispositivos.join(", ")}` : "";
+    const resumen = $("resumen-hallazgos");
+    if (!codigos.length) {
+      resumen.replaceChildren(el("span", { class: "chip ok", text: "✓ Sin problemas" }),
+        document.createTextNode(" Todas las líneas tienen marca de tiempo válida y un formato reconocido; el estado de cada medición coincide con los umbrales."));
+    } else {
+      resumen.replaceChildren(...codigos.map((k) =>
+        el("span", { class: `chip ${est.severidades[k]}`, text: `${est.descripciones[k]}: ${fmt(conteo[k])}` })));
+    }
+    $("tabla-hallazgos-env").hidden = !est.hallazgos.length;
+    $("tabla-hallazgos").replaceChildren(...est.hallazgos.map((h) => el("tr", {},
+      el("td", {}, el("span", { class: `chip ${h.severidad}`, text: SEVERIDAD_TXT[h.severidad] })),
+      el("td", { text: h.archivo }),
+      el("td", { class: "num", text: h.linea ?? "—" }),
+      el("td", { text: est.descripciones[h.codigo] + (h.detalle ? ` (${h.detalle})` : "") }),
+      el("td", {}, h.texto ? el("code", { class: "lit", text: h.texto }) : "—"),
+    )));
+    const total = Object.values(conteo).reduce((a, b) => a + b, 0);
+    const nota = $("nota-hallazgos");
+    nota.hidden = total <= est.hallazgos.length;
+    nota.textContent = `Se listan ${fmt(est.hallazgos.length)} de ${fmt(total)} hallazgos; los conteos de arriba son completos.`;
+
+    $("tabla-sesiones").replaceChildren(...j.sesiones.map((s) => {
+      const estado = s.sin_calibrar ? el("span", { class: "chip advertencia", text: "Sin calibrar" })
+        : s.cierre_implicito ? el("span", { class: "chip advertencia", text: "Cierre implícito" })
+        : el("span", { class: "chip ok", text: "OK" });
+      return el("tr", {},
+        el("td", {}, el("code", { class: "lit", text: s.sesion_id })),
+        el("td", { text: s.dispositivo }), el("td", { text: s.inicio }), el("td", { text: s.fin }),
+        el("td", { class: "num", text: `${fmt(s.duracion_s)} s` }),
+        el("td", { class: "num", text: fmt(s.n_muestras) }),
+        el("td", { class: "num", text: fmt(s.n_precalibracion) }),
+        el("td", { text: CIERRES[s.evento_cierre] || s.evento_cierre }),
+        el("td", {}, estado));
+    }));
+
+    $("tarjeta-figura").hidden = !j.graficable;
+    if (j.graficable) {
+      $("sin-calibrar").checked = false;
+      $("sin-calibrar").parentElement.hidden = !j.sesiones.some((s) => s.sin_calibrar);
+      $("descargas").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        ...j.formatos.map((f) => el("a", { class: "boton", "data-formato": f, text: NOMBRES_FORMATO[f] || f.toUpperCase() })),
+        el("a", { class: "boton", href: `/api/datos/${j.id}.csv`, text: "Datos (CSV)" }));
+      cambiarVista("completo");
+    }
+    $("resultados").hidden = false;
+  }
+
+  // ---------- Mostrar: conjunto completo / por persona / por sesión ----------
+  function cambiarVista(nueva) {
+    vista = nueva;
+    document.querySelectorAll("[data-vista]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vista === vista)));
+    const control = $("control-elegido"), sel = $("elegido"), nota = $("nota-alcance");
+    control.hidden = vista === "completo";
+    nota.hidden = true;
+    if (vista === "persona") {
+      $("rotulo-elegido").textContent = "Persona";
+      sel.replaceChildren(...analisis.personas.map((p) => el("option", { value: p.usuario_id,
+        text: `${nombrePersona(p.persona)} · ${plural(p.n_sesiones, "sesión", "sesiones")} · ${plural(p.n_analizables, "muestra", "muestras")}` })));
+      if (analisis.personas.length === 1 && analisis.personas[0].persona === null) {
+        nota.hidden = false;
+        nota.textContent = "Ningún archivo tiene persona asignada. Para comparar personas, vuelve a subir los archivos escribiendo la persona de cada uno.";
+      }
+    } else if (vista === "sesion") {
+      $("rotulo-elegido").textContent = "Sesión";
+      // Numeración por archivo; con varios archivos, cada opción dice de quién o de qué archivo es.
+      const varios = analisis.por_archivo.length > 1;
+      const cuenta = {};
+      sel.replaceChildren(...analisis.sesiones.map((s) => {
+        cuenta[s.archivo] = (cuenta[s.archivo] || 0) + 1;
+        const quien = s.persona ?? s.archivo;
+        return el("option", { value: s.sesion_id,
+          text: (varios ? `${quien} · ` : "") + `Sesión ${cuenta[s.archivo]} · ${s.inicio}–${s.fin} · ${plural(s.n_muestras, "muestra", "muestras")}` });
+      }));
+    }
+    actualizarFigura();
+  }
+
+  function parametros() {
+    const p = new URLSearchParams({ metodo });
+    const v = $("elegido").value;
+    if (vista === "sesion" && v) p.set("sesion", v);
+    if (vista === "persona" && v) p.set("usuario", v);
+    if ($("sin-calibrar").checked) p.set("incluir_sin_calibrar", "1");
+    return p;
+  }
+
+  function actualizarFigura() {
+    if (!analisis) return;
+    const p = parametros();
+    const lienzo = $("lienzo"), img = $("figura"), estado = $("figura-estado");
+    lienzo.classList.add("cargando");
+    estado.hidden = false;
+    estado.textContent = "Generando figura…";
+    img.onload = () => { lienzo.classList.remove("cargando"); estado.hidden = true; };
+    img.onerror = () => { lienzo.classList.remove("cargando"); estado.textContent = "No se pudo generar la figura. Vuelve a subir el archivo."; };
+    img.src = `/api/figura/${analisis.id}.svg?${p}`;
+    document.querySelectorAll("#descargas a[data-formato]").forEach((a) => {
+      const q = new URLSearchParams(p); q.set("descargar", "1");
+      a.href = `/api/figura/${analisis.id}.${a.dataset.formato}?${q}`;
+    });
+  }
+
+  document.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => cambiarVista(b.dataset.vista)));
+  $("elegido").addEventListener("change", actualizarFigura);
+  $("sin-calibrar").addEventListener("change", actualizarFigura);
+  document.querySelectorAll("[data-metodo]").forEach((b) => b.addEventListener("click", () => {
+    metodo = b.dataset.metodo;
+    document.querySelectorAll("[data-metodo]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    actualizarFigura();
+  }));
+})();
+</script>
+</body>
+</html>

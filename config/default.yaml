@@ -1,0 +1,104 @@
+# Configuración por defecto de corrector-postura-analitica.
+# Todo parámetro numérico del proyecto vive aquí. Un archivo pasado con --config
+# se fusiona encima de este (solo hace falta escribir las claves que cambian).
+
+# Umbrales de alerta quemados en el firmware (grados enteros).
+# Estado derivado: MAL si F > FRONTAL_MAX o F < FRONTAL_MIN o L > LATERAL_MAX o L < LATERAL_MIN.
+umbrales:
+  FRONTAL_MAX: 25    # inclinación hacia adelante
+  FRONTAL_MIN: -10   # inclinación hacia atrás
+  LATERAL_MAX: 15    # inclinación a la derecha
+  LATERAL_MIN: -15   # inclinación a la izquierda
+
+rutas:
+  salidas: salidas   # el log de ingesta se escribe como ingesta.log junto al parquet de salida
+
+ingesta:
+  codificacion: utf-8-sig   # UTF-8; tolera BOM inicial
+
+# Identificación del usuario. El formato actual no trae identificador, así que
+# se resuelve en este orden: mapa explícito por nombre de archivo → patrón sobre
+# el nombre de archivo → valor por defecto.
+usuarios:
+  mapa_archivos: {}                      # p. ej. {"registro_ana.txt": "U01"}
+  patron_archivo: '^(?P<usuario>U\d+)[_-]'  # p. ej. U01_2026-10-31.txt
+  por_defecto: desconocido
+
+# Fecha del registro. Las líneas solo traen HH:MM:SS.mmm, así que la fecha se
+# toma del nombre de archivo o de aquí. Si no hay ninguna, se usa fecha_marcador
+# y la sesión queda con la bandera fecha_desconocida (la hora sigue siendo válida).
+fecha:
+  patron_archivo: '(?P<fecha>\d{4}-\d{2}-\d{2})'
+  por_defecto: null                      # "AAAA-MM-DD" o null
+  fecha_marcador: "1900-01-01"
+  # Si la hora retrocede más que esto entre líneas consecutivas, se asume
+  # cruce de medianoche y se suma un día.
+  retroceso_medianoche_s: 43200
+
+sesiones:
+  incluir_sin_calibrar: false
+  # Con varios CALIBRADO en una sesión, el cero que vale es el del último:
+  # las muestras previas a él quedan con post_calibracion = False.
+  # Valores: "ultima" | "primera".
+  calibracion_multiple: ultima
+
+calidad:
+  cadencia_nominal_s: 1.0
+  # Un intervalo entre muestras mayor que esto cuenta como hueco.
+  umbral_hueco_s: 2.5
+  # Un intervalo menor que esto cuenta como muestra en ráfaga (posible duplicado).
+  umbral_rafaga_s: 0.5
+
+figura:
+  metodo: kde            # kde | hex | auto
+  auto_umbral_muestras: 20000   # con metodo=auto, a partir de aquí se usa hex
+  paleta: viridis        # secuencial, perceptualmente uniforme
+  dpi: 300
+  formatos: [png, svg]
+  tamano_pulgadas: [8.0, 7.5]
+  proporcion_marginal: 0.22     # fracción del alto/ancho para los histogramas marginales
+  margen_vista_grados: 5        # margen alrededor de datos y umbrales
+  ancho_pie_caracteres: 120     # ajuste de línea del pie de figura
+  kde:
+    min_muestras: 3             # por debajo, no se estima densidad kernel
+    ancho_banda: scott          # scott | silverman | número
+    resolucion_malla: 200
+    niveles: 12
+    fraccion_minima_nivel: 0.02 # niveles por debajo de esta fracción del máximo no se rellenan
+    tamano_punto_aislado: 9     # muestras en zonas sin relleno se dibujan como puntos (pt²)
+  hex:
+    tamano_malla: 30
+    min_conteo: 1
+  histograma:
+    ancho_bin_grados: 1
+  umbral_rectangulo:
+    grosor_linea: 1.4
+    patron: [4, 3]              # guiones (largo, espacio) en puntos
+
+# Filtro previo: un archivo que no lo pasa se rechaza y NO se procesa.
+validacion:
+  extensiones_permitidas: [.txt]
+  bytes_revision_binaria: 8192   # se busca un byte nulo en este tramo inicial
+  lineas_muestra_formato: 50     # al menos una de estas primeras líneas debe tener HH:MM:SS.mmm
+
+web:
+  host: 127.0.0.1        # solo accesible desde este equipo
+  puerto: 8000
+  max_mb_subida: 20
+  max_analisis_en_memoria: 20   # análisis recientes que se conservan para descargas
+  max_hallazgos_por_codigo: 50  # hallazgos listados por tipo (el conteo siempre es completo)
+  formatos_descarga: [png, svg, pdf, jpg]
+
+estilo:
+  fuente: DejaVu Sans
+  tamano_base: 9
+  tamano_titulo: 11
+  tamano_pie: 7.5
+  tamano_rotulo: 9
+  color_fondo: "#ffffff"
+  color_texto: "#1f2328"
+  color_texto_secundario: "#59636e"
+  color_malla: "#e6e8eb"
+  color_umbral: "#c2410c"
+  color_histograma: "#3b528b"
+  alfa_histograma: 0.85

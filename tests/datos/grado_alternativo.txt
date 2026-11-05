@@ -1,0 +1,9 @@
+10:00:00.000 Connecting to WLAB CP ...
+10:00:01.000 Connected
+10:00:02.000 CALIBRADO
+10:00:03.000 F = 2°, L = - 3°, BIEN
+10:00:04.000 F = -14°, L = 9°, MAL
+10:00:05.000 BATERIA BAJA 15%
+linea sin marca de tiempo
+10:00:06.000 F = - 2°, L = 0°, BIEN
+10:00:07.000 Disconnected

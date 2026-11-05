@@ -1,0 +1,6 @@
+10:00:00.000 Connecting to WLAB CP ...
+10:00:01.000 Connected
+10:00:02.000 F = 20º, L = 1º, BIEN
+10:00:03.000 F = 21º, L = 1º, BIEN
+10:00:04.000 F = 22º, L = 2º, BIEN
+10:00:05.000 Disconnected
