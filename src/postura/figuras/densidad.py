@@ -109,6 +109,22 @@ def _bordes_enteros(lim: tuple[float, float], ancho: float) -> np.ndarray:
     return np.arange(a, b + ancho, ancho)
 
 
+def seleccion(mediciones: pd.DataFrame, config: dict, usuarios: list[str] | None,
+              sesiones: list[str] | None) -> tuple[pd.DataFrame, int, int]:
+    """Muestras analizables del filtro y cuántas quedaron fuera: (datos, n_precalibración, n_sin_calibrar)."""
+    incluir_sc = bool(config["sesiones"]["incluir_sin_calibrar"])
+    filtro = pd.Series(True, index=mediciones.index)
+    if usuarios:
+        filtro &= mediciones["usuario_id"].isin(usuarios)
+    if sesiones:
+        filtro &= mediciones["sesion_id"].isin(sesiones)
+    en_filtro = mediciones.loc[filtro]
+    datos = en_filtro.loc[seleccion_analizable(en_filtro, incluir_sc)]
+    n_pre = int((~en_filtro["post_calibracion"] & en_filtro["t_rel_calibracion"].notna()).sum())
+    n_sc = int(en_filtro["t_rel_calibracion"].isna().sum()) if not incluir_sc else 0
+    return datos, n_pre, n_sc
+
+
 def _slug(texto: str) -> str:
     sin_acentos = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]+", "_", sin_acentos.lower()).strip("_")
@@ -134,18 +150,7 @@ def figura_densidad(
     u = config["umbrales"]
     usuarios = _como_lista(usuario)
     ids_sesion = _como_lista(sesion)
-    incluir_sc = bool(config["sesiones"]["incluir_sin_calibrar"])
-
-    filtro = pd.Series(True, index=mediciones.index)
-    if usuarios:
-        filtro &= mediciones["usuario_id"].isin(usuarios)
-    if ids_sesion:
-        filtro &= mediciones["sesion_id"].isin(ids_sesion)
-    en_filtro = mediciones.loc[filtro]
-    analizable = seleccion_analizable(en_filtro, incluir_sc)
-    datos = en_filtro.loc[analizable]
-    n_pre = int((~en_filtro["post_calibracion"] & en_filtro["t_rel_calibracion"].notna()).sum())
-    n_sc = int(en_filtro["t_rel_calibracion"].isna().sum()) if not incluir_sc else 0
+    datos, n_pre, n_sc = seleccion(mediciones, config, usuarios, ids_sesion)
 
     lat = datos["lateral"].to_numpy(dtype=float)
     fro = datos["frontal"].to_numpy(dtype=float)

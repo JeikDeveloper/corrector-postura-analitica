@@ -40,7 +40,7 @@ def test_referencia_estructura_correcta(cliente):
     j = r.get_json()
     est = j["estructura"]
     # Solo hay un aviso informativo (sin fecha en el nombre), que no cambia el veredicto
-    assert j["api"] == 5
+    assert j["api"] == 8
     assert est["veredicto"] == "correcta"
     assert est["resumen"]["lineas"] == 363 and est["resumen"]["mediciones"] == 347
     assert est["resumen"]["dispositivos"] == ["WLAB CP"]

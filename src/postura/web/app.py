@@ -5,6 +5,17 @@ Rutas:
     POST /api/analizar              sube uno o varios .txt → validación + sesiones
     POST /api/figura.<formato>      figura (png, svg, pdf, jpg); descargar=1 la baja como archivo
     POST /api/datos.csv             mediciones normalizadas
+    POST /api/analizar/estadistica  análisis descriptivo de F y L, BIEN vs MAL (JSON)
+    POST /api/analizar/estadistica.<formato>   figura descriptiva (png, svg, pdf; campo figura:
+                                    histogramas, cajas, violin o series)
+    POST /api/analizar/estadistica/reporte.pdf  reporte completo de varias páginas
+    POST /api/analizar/estadistica.csv          tabla de estadísticos descriptivos
+    POST /api/densidad3d            superficie 3D del mapa de densidad (JSON, vista interactiva)
+    POST /api/figura3d.<formato>    la misma superficie como imagen fija
+    POST /api/ergonomia.<formato>   figura ergonómica ISO 11226 (campo figura: zonas,
+                                    momentos, sujetos o histogramas)
+    POST /api/ergonomia/metricas    métricas |σ|, |R|, σG, RG, % por zona y ANOVA (JSON)
+    POST /api/ergonomia/metricas.csv  la tabla de métricas en CSV
 
 Las tres rutas POST reciben los mismos campos: ``archivos`` y ``personas`` (una por
 archivo). La de figura acepta además los filtros sesion, usuario, metodo
@@ -17,6 +28,8 @@ memoria compartida entre peticiones, como Vercel.
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 import threading
 from dataclasses import asdict
@@ -25,9 +38,15 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
+from .. import ergonomia as erg
+from .. import estadistica as est
 from .. import parser as p
 from ..configuracion import cargar_configuracion, fusionar
-from ..figuras.densidad import TIPOS_MIME, exportar, figura_densidad
+from ..figuras.densidad import TIPOS_MIME, exportar, figura_densidad, seleccion
+from ..figuras.densidad3d import figura_densidad_3d, malla_3d
+from ..figuras.ergonomia import FIGURAS, figura_ergonomia
+from ..figuras.estadistica import FIGURAS as FIGURAS_EST
+from ..figuras.estadistica import figura_estadistica, reporte_pdf
 from ..ingesta import ingerir_contenidos
 from ..modelo import ErrorEsquema, discrepancias, seleccion_analizable
 from ..sesiones import resolver_usuario
@@ -36,7 +55,7 @@ from ..validacion import validar_estructura
 ESTATICOS = Path(__file__).parent / "estatico"
 # Súbala cuando cambie la forma de la respuesta de /api/analizar; la página la compara
 # para avisar si quedó abierto un servidor viejo.
-VERSION_API = 5
+VERSION_API = 8
 _BLOQUEO_FIGURAS = threading.Lock()   # matplotlib no es seguro entre hilos
 
 
@@ -163,34 +182,156 @@ def crear_app(config: dict | None = None) -> Flask:
             graficable=bool(len(med)),
         )
 
+    def _filtros():
+        """(config con incluir_sin_calibrar aplicado, sesión, persona) desde el formulario."""
+        args = request.form
+        cfg = config
+        if args.get("incluir_sin_calibrar") in ("1", "true"):
+            cfg = fusionar(config, {"sesiones": {"incluir_sin_calibrar": True}})
+        return cfg, args.get("sesion") or None, args.get("usuario") or None
+
+    def _imagen(figura, formato: str, cfg: dict, nombre: str) -> Response:
+        try:
+            contenido = exportar(figura, formato, cfg)
+        finally:
+            plt.close(figura)
+        respuesta = Response(contenido, mimetype=TIPOS_MIME[formato])
+        respuesta.headers["Cache-Control"] = "no-store"
+        if request.form.get("descargar") == "1":
+            respuesta.headers["Content-Disposition"] = f'attachment; filename="{nombre}.{formato}"'
+        return respuesta
+
     @app.post("/api/figura.<formato>")
     def figura(formato: str):
         if formato not in formatos:
             abort(404, description=f"Formato no disponible: {formato}")
-        args = request.form
-        metodo = args.get("metodo") or None
+        metodo = request.form.get("metodo") or None
         if metodo not in (None, "kde", "hex", "auto"):
             abort(400, description="metodo debe ser kde, hex o auto")
-        cfg = config
-        if args.get("incluir_sin_calibrar") in ("1", "true"):
-            cfg = fusionar(config, {"sesiones": {"incluir_sin_calibrar": True}})
-        sesion = args.get("sesion") or None
-        usuario = args.get("usuario") or None
+        cfg, sesion, usuario = _filtros()
         mediciones, nombre_base = _mediciones_subidas()
         with _BLOQUEO_FIGURAS:
-            r = figura_densidad(mediciones, cfg,
-                                usuario=usuario, sesion=sesion, metodo=metodo)
-            try:
-                contenido = exportar(r.figura, formato, cfg)
-            finally:
-                plt.close(r.figura)
-        respuesta = Response(contenido, mimetype=TIPOS_MIME[formato])
-        respuesta.headers["Cache-Control"] = "no-store"
-        if args.get("descargar") == "1":
+            r = figura_densidad(mediciones, cfg, usuario=usuario, sesion=sesion, metodo=metodo)
             sufijo = _nombre_seguro(sesion or usuario or "completo")
-            nombre = f"densidad_{nombre_base}_{sufijo}_{r.metodo}.{formato}"
-            respuesta.headers["Content-Disposition"] = f'attachment; filename="{nombre}"'
-        return respuesta
+            return _imagen(r.figura, formato, cfg, f"densidad_{nombre_base}_{sufijo}_{r.metodo}")
+
+    formatos_est = [f for f in config["estadistica"]["formatos_descarga"] if f in TIPOS_MIME]
+
+    @app.post("/api/analizar/estadistica")
+    def estadistica():
+        cfg, sesion, usuario = _filtros()
+        mediciones, _ = _mediciones_subidas()
+        datos, _, _ = seleccion(mediciones, cfg, [usuario] if usuario else None, [sesion] if sesion else None)
+        return jsonify({**est.analisis(datos, cfg), "formatos": formatos_est})
+
+    @app.post("/api/analizar/estadistica.csv")
+    def estadistica_csv():
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        datos, _, _ = seleccion(mediciones, cfg, [usuario] if usuario else None, [sesion] if sesion else None)
+        filas = est.descriptivos(datos, cfg)
+        claves_p = list(filas[0]["percentiles"]) if filas else []
+        salida = io.StringIO()
+        w = csv.writer(salida)
+        w.writerow(["angulo", "grupo", "n", "media", "sd", "min", *[f"p{k}" for k in claves_p], "max", "iqr",
+                    "asimetria", "curtosis"])
+        for f in filas:
+            w.writerow([f["angulo"], f["grupo"], f["n"], f["media"], f["sd"], f["min"],
+                        *[f["percentiles"][k] for k in claves_p], f["max"], f["iqr"], f["asimetria"], f["curtosis"]])
+        sufijo = _nombre_seguro(sesion or usuario or "completo")
+        return Response(salida.getvalue().encode("utf-8-sig"), mimetype="text/csv", headers={
+            "Content-Disposition": f'attachment; filename="estadistica_{nombre_base}_{sufijo}.csv"'})
+
+    @app.post("/api/analizar/estadistica/reporte.pdf")
+    def estadistica_reporte():
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        with _BLOQUEO_FIGURAS:
+            contenido = reporte_pdf(mediciones, cfg, usuario=usuario, sesion=sesion)
+        sufijo = _nombre_seguro(sesion or usuario or "completo")
+        return Response(contenido, mimetype=TIPOS_MIME["pdf"], headers={
+            "Content-Disposition": f'attachment; filename="reporte_estadistico_{nombre_base}_{sufijo}.pdf"',
+            "Cache-Control": "no-store"})
+
+    @app.post("/api/analizar/estadistica.<formato>")
+    def estadistica_figura(formato: str):
+        if formato not in formatos_est:
+            abort(404, description=f"Formato no disponible: {formato} (use {', '.join(formatos_est)})")
+        tipo = request.form.get("figura") or "histogramas"
+        if tipo not in FIGURAS_EST:
+            abort(400, description=f"figura debe ser {', '.join(FIGURAS_EST)}")
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        with _BLOQUEO_FIGURAS:
+            r = figura_estadistica(mediciones, cfg, tipo, usuario=usuario, sesion=sesion)
+            sufijo = _nombre_seguro(sesion or usuario or "completo")
+            return _imagen(r.figura, formato, cfg, f"estadistica_{tipo}_{nombre_base}_{sufijo}")
+
+    @app.post("/api/densidad3d")
+    def densidad_3d():
+        cfg, sesion, usuario = _filtros()
+        mediciones, _ = _mediciones_subidas()
+        return jsonify(malla_3d(mediciones, cfg, usuario=usuario, sesion=sesion))
+
+    @app.post("/api/figura3d.<formato>")
+    def figura_3d(formato: str):
+        if formato not in formatos:
+            abort(404, description=f"Formato no disponible: {formato}")
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        with _BLOQUEO_FIGURAS:
+            fig, _ = figura_densidad_3d(mediciones, cfg, usuario=usuario, sesion=sesion)
+            sufijo = _nombre_seguro(sesion or usuario or "completo")
+            return _imagen(fig, formato, cfg, f"densidad3d_{nombre_base}_{sufijo}")
+
+    @app.post("/api/ergonomia.<formato>")
+    def figura_ergo(formato: str):
+        if formato not in formatos:
+            abort(404, description=f"Formato no disponible: {formato}")
+        tipo = request.form.get("figura") or "zonas"
+        if tipo not in FIGURAS:
+            abort(400, description=f"figura debe ser {', '.join(FIGURAS)}")
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        with _BLOQUEO_FIGURAS:
+            r = figura_ergonomia(mediciones, cfg, tipo, usuario=usuario, sesion=sesion)
+            sufijo = "todos" if tipo == "sujetos" else _nombre_seguro(sesion or usuario or "completo")
+            return _imagen(r.figura, formato, cfg, f"ergonomia_{tipo}_{nombre_base}_{sufijo}")
+
+    def _metricas_ergo():
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        datos, global_ = erg.seleccionar(mediciones, cfg, usuario, sesion)
+        sel = erg.metricas(datos, cfg)
+        g = erg.metricas(global_, cfg)
+        return {
+            "seleccion": {**sel.a_dict(),
+                          "sigma_g": erg._cociente(sel.dispersion, g.dispersion),
+                          "r_g": erg._cociente(sel.desplazamiento, g.desplazamiento)},
+            "filas": erg.tabla_metricas(global_, cfg, cfg["usuarios"]["por_defecto"]),
+            "momentos": erg.comparar_momentos(global_, datos, cfg),
+            "nombres_zona": cfg["ergonomia"]["nombres_zona"],
+            "fuente": cfg["ergonomia"]["fuente"],
+        }, nombre_base
+
+    @app.post("/api/ergonomia/metricas")
+    def metricas_ergo():
+        return jsonify(_metricas_ergo()[0])
+
+    @app.post("/api/ergonomia/metricas.csv")
+    def metricas_ergo_csv():
+        datos, nombre_base = _metricas_ergo()
+        salida = io.StringIO()
+        columnas = ["tipo", "etiqueta", "n", "media_frontal", "media_lateral", "sd_frontal", "sd_lateral",
+                    "dispersion", "desplazamiento", "sigma_g", "r_g"]
+        w = csv.writer(salida)
+        w.writerow(columnas + [f"pct_{z}" for z in erg.NIVELES])
+        for f in datos["filas"]:
+            w.writerow([f[c] for c in columnas] + [f["pct_zona"][z] for z in erg.NIVELES])
+        return Response(
+            salida.getvalue().encode("utf-8-sig"), mimetype="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="metricas_ergonomia_{nombre_base}.csv"'},
+        )
 
     @app.post("/api/datos.csv")
     def datos_csv():

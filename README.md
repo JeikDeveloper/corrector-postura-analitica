@@ -47,9 +47,35 @@ Luego la página muestra:
    de tiempo, horas fuera de orden, mediciones fuera de sesión, estados que no coinciden con
    los umbrales, sesiones sin calibrar o sin cierre).
 2. **Sesiones detectadas** con inicio, fin, duración, muestras y tipo de cierre.
-3. **Mapa de densidad**, con *Mostrar*: conjunto completo, por persona o por sesión; en
-   variante kernel o hexágonos.
-4. **Descargas**: PNG (300 ppp), SVG, PDF, JPG y los datos normalizados en CSV.
+3. **Análisis postural**, con *Mostrar*: conjunto completo, por persona o por sesión, y dos
+   pestañas:
+   - *4.1 Mapa de densidad*, con *Método*: densidad kernel, hexágonos o tridimensional.
+     Tridimensional muestra la misma densidad kernel como superficie (altura = tiempo de
+     permanencia), con el rectángulo de umbrales en el piso. En la página se gira
+     y se acerca con el mouse (Plotly, cargado desde jsDelivr al abrir la vista, así que
+     necesita internet); la imagen fija se descarga en PNG, SVG, PDF o JPG con la cámara
+     de `figura.tres_d`.
+   - *4.3 Análisis descriptivo*: estadística descriptiva de F y L separada por el estado
+     BIEN/MAL que reporta el dispositivo (módulo `postura.estadistica`): n, media, desviación
+     estándar, mínimo, percentiles (`estadistica.percentiles`), máximo, rango intercuartílico,
+     asimetría y curtosis; episodios (rachas consecutivas BIEN o MAL y su duración); y qué
+     umbral excede cada muestra MAL. Figuras deterministas (`postura.figuras.estadistica`):
+     histogramas, box plots, violin plots y series temporales por sesión, descargables en
+     PNG (300 ppp), SVG (texto editable) y PDF, más un reporte completo en PDF de varias
+     páginas y la tabla en CSV. API: `POST /api/analizar/estadistica` (JSON),
+     `/api/analizar/estadistica.<png|svg|pdf>`, `/api/analizar/estadistica/reporte.pdf` y
+     `/api/analizar/estadistica.csv`.
+   - *4.2 Análisis ergonómico (ISO 11226)*: lo que plantea la presentación "Posture Analysis
+     During Desk Work of Researchers" (Betancur, UMB). Zonas óptima, aceptable y extrema
+     (BGIA-Report 2/2007, ISO 11226, EN 1005-4) con la dispersión |σ| = √(σα² + σβ²) y el
+     desplazamiento |R| = √(α̅² + β̅²); los cocientes σG y RG respecto al conjunto; paneles
+     por momento del día (mañana, tarde, noche) con ANOVA; un panel por sujeto; histogramas
+     de cada ángulo coloreados por zona; y la tabla de métricas por persona y sesión. Zonas,
+     franjas horarias y colores están en `ergonomia` de
+     [config/default.yaml](config/default.yaml). La relación con el dolor percibido no se
+     calcula, porque el registro no trae ese dato.
+4. **Descargas**: PNG (300 ppp), SVG, PDF, JPG, los datos normalizados en CSV y las
+   métricas ergonómicas en CSV.
 
 El servidor escucha solo en este equipo (`web.host: 127.0.0.1`). No guarda nada: los
 archivos subidos se procesan en memoria, y la página los reenvía con cada figura o

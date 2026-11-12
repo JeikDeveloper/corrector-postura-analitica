@@ -132,7 +132,7 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; font-weight: 600; color: var(--texto-2); border-bottom: 1px solid var(--borde); padding: 6px 10px; white-space: nowrap; }
   td { border-bottom: 1px solid var(--borde); padding: 7px 10px; vertical-align: top; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   th.num { text-align: right; }
   tr:last-child td { border-bottom: 0; }
   code.lit { font-family: var(--mono); font-size: 12px; background: var(--fondo); padding: 1px 5px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
@@ -183,6 +183,50 @@
   .toast.visible { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
   .modal-veredicto { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0 0 14px; font-size: 13px; color: var(--texto-2); }
+  /* Pestañas de la sección 4 */
+  .rotulo-vistas { font-size: 13px; color: var(--texto-2); margin: 6px 0 6px; }
+  .pestanas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .pestanas button { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: start; text-align: left;
+    padding: 12px 14px; border: 1.5px solid var(--borde); border-radius: 10px; background: var(--superficie); color: var(--texto); }
+  .pestanas button:hover { border-color: var(--acento); }
+  .pestanas .num-vista { grid-row: span 2; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center;
+    font-size: 13px; font-weight: 700; background: var(--fondo); color: var(--texto-2); border: 1px solid var(--borde); }
+  .pestanas .titulo-vista { font-weight: 650; font-size: 15px; }
+  .pestanas .desc-vista { grid-column: 2; font-size: 12.5px; color: var(--texto-2); line-height: 1.4; }
+  .pestanas .marca-vista { grid-row: span 2; font-size: 12px; font-weight: 600; color: var(--acento); visibility: hidden; white-space: nowrap; }
+  .pestanas button[aria-selected="true"] { border-color: var(--acento); background: var(--acento-suave); box-shadow: 0 0 0 1px var(--acento) inset; }
+  .pestanas button[aria-selected="true"] .num-vista { background: var(--acento); border-color: var(--acento); color: var(--superficie); }
+  .pestanas button[aria-selected="true"] .titulo-vista { color: var(--acento); }
+  .pestanas button[aria-selected="true"] .marca-vista { visibility: visible; }
+  .panel-vista { border: 1.5px solid var(--acento); border-radius: 10px; padding: 16px; margin-top: 12px; }
+  .panel-vista > h3 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .panel-vista > h3 .num-vista { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--acento); color: var(--superficie); }
+  @media (max-width: 560px) { .panel-vista { padding: 12px; } }
+  .grafico-3d { position: relative; background: #fff; border: 1px solid var(--borde); border-radius: 8px; height: 600px; overflow: hidden; }
+  .grafico-3d .estado { position: absolute; inset: 0; display: grid; place-items: center; color: #59636e; font-size: 14px; text-align: center; padding: 16px; z-index: 2; pointer-events: none; }
+  #plot-3d { width: 100%; height: 100%; }
+  .pie-3d { font-size: 12.5px; color: var(--texto-2); white-space: pre-line; margin: 10px 0 0; }
+  .titulo-3d { font-weight: 650; margin: 0 0 8px; font-size: 14px; }
+  @media (max-width: 560px) { .grafico-3d { height: 440px; } }
+  .subtitulo { font-size: 14px; margin: 22px 0 8px; }
+  .subtitulo small { font-weight: 400; color: var(--texto-3); margin-left: 6px; }
+  .metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+  .metrica { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; }
+  .metrica .valor { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .metrica .rotulo { font-size: 12px; color: var(--texto-2); }
+  .metrica .barra { height: 4px; border-radius: 2px; margin-top: 6px; background: var(--fondo); overflow: hidden; }
+  .metrica .barra span { display: block; height: 100%; }
+  .z-optima { --zc: #3f9b4f; } .z-aceptable { --zc: #d9a400; } .z-extrema { --zc: #d64a2b; }
+  .metrica.zona { border-left: 4px solid var(--zc); }
+  .metrica.zona .barra span { background: var(--zc); }
+  .anova { display: grid; gap: 6px; margin-top: 10px; font-size: 13px; }
+  .anova div { padding: 8px 12px; border-radius: 8px; background: var(--fondo); border: 1px solid var(--borde); }
+  .tabla-metricas tr.t-conjunto td { font-weight: 600; }
+  .tabla-est tr.g-Todos td { font-weight: 600; }
+  .tabla-est tr.primera td { border-top: 2px solid var(--borde); }
+  .punto-estado { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .tabla-metricas tr.t-sesion td:first-child { padding-left: 22px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -261,9 +305,9 @@
     </section>
 
     <section class="tarjeta" id="tarjeta-figura">
-      <h2>4 · Mapa de densidad postural</h2>
+      <h2>4 · Análisis postural</h2>
       <div class="controles">
-        <div class="control">Mostrar
+        <div class="control">Mostrar <small style="color:var(--texto-3)">(aplica a todas las vistas)</small>
           <div class="segmentado" role="group" aria-label="Mostrar">
             <button type="button" data-vista="completo" aria-pressed="true">Conjunto completo</button>
             <button type="button" data-vista="persona" aria-pressed="false">Por persona</button>
@@ -273,20 +317,170 @@
         <label class="control" id="control-elegido" hidden><span id="rotulo-elegido">Persona</span>
           <select id="elegido"></select>
         </label>
-        <div class="control">Método
-          <div class="segmentado" role="group" aria-label="Método">
-            <button type="button" data-metodo="kde" aria-pressed="true">Densidad kernel</button>
-            <button type="button" data-metodo="hex" aria-pressed="false">Hexágonos</button>
-          </div>
-        </div>
         <label class="control casilla"><input type="checkbox" id="sin-calibrar"> Incluir sesiones sin calibrar</label>
       </div>
-      <div class="lienzo" id="lienzo">
-        <img id="figura" alt="Mapa de densidad conjunta de los ángulos lateral y frontal">
-        <span class="estado" id="figura-estado">Generando figura…</span>
-      </div>
       <p class="nota" id="nota-alcance" hidden></p>
-      <div class="fila descargas" id="descargas"><span class="rotulo">Descargar:</span></div>
+
+      <p class="rotulo-vistas">Elige la vista:</p>
+      <div class="pestanas" role="tablist" aria-label="Tipo de análisis">
+        <button type="button" role="tab" id="tab-densidad" aria-controls="panel-densidad" aria-selected="true" data-pestana="densidad">
+          <span class="num-vista">4.1</span>
+          <span class="titulo-vista">Mapa de densidad</span>
+          <span class="marca-vista">✓ Viendo</span>
+          <span class="desc-vista">Dónde pasó más tiempo la postura y los umbrales de alerta del dispositivo. En 2D o en 3D.</span>
+        </button>
+        <button type="button" role="tab" id="tab-ergo" aria-controls="panel-ergo" aria-selected="false" data-pestana="ergo">
+          <span class="num-vista">4.2</span>
+          <span class="titulo-vista">Análisis ergonómico (ISO 11226)</span>
+          <span class="marca-vista">✓ Viendo</span>
+          <span class="desc-vista">Zonas óptima / aceptable / extrema, |σ| y |R|, momentos del día y comparación por sujeto.</span>
+        </button>
+        <button type="button" role="tab" id="tab-est" aria-controls="panel-est" aria-selected="false" data-pestana="est">
+          <span class="num-vista">4.3</span>
+          <span class="titulo-vista">Análisis descriptivo</span>
+          <span class="marca-vista">✓ Viendo</span>
+          <span class="desc-vista">Estadística de F y L en BIEN vs MAL: percentiles, histogramas, box plots, violin plots y series temporales.</span>
+        </button>
+      </div>
+
+      <div role="tabpanel" class="panel-vista" id="panel-densidad" aria-labelledby="tab-densidad">
+        <h3><span class="num-vista">4.1</span> Mapa de densidad</h3>
+        <div class="controles">
+          <div class="control">Método
+            <div class="segmentado" role="group" aria-label="Método">
+              <button type="button" data-metodo="kde" aria-pressed="true">Densidad kernel</button>
+              <button type="button" data-metodo="hex" aria-pressed="false">Hexágonos</button>
+              <button type="button" data-metodo="3d" aria-pressed="false">Tridimensional</button>
+            </div>
+          </div>
+        </div>
+        <div id="vista-2d">
+          <div class="lienzo" id="lienzo">
+            <img id="figura" alt="Mapa de densidad conjunta de los ángulos lateral y frontal">
+            <span class="estado" id="figura-estado">Generando figura…</span>
+          </div>
+          <div class="fila descargas" id="descargas"><span class="rotulo">Descargar:</span></div>
+        </div>
+        <div id="vista-3d" hidden>
+        <p class="titulo-3d" id="titulo-3d"></p>
+        <div class="grafico-3d">
+          <div id="plot-3d" role="img" aria-label="Superficie 3D del tiempo de permanencia según los ángulos lateral y frontal"></div>
+          <span class="estado" id="estado-3d">Generando superficie…</span>
+        </div>
+        <div class="fila" style="margin-top:10px">
+          <button type="button" id="reiniciar-3d">Restablecer vista</button>
+          <button type="button" id="png-vista-3d">PNG de esta vista</button>
+          <span class="nota" style="margin:0">Arrastra para girar · rueda para acercar · pasa el cursor para ver valores.</span>
+        </div>
+        <p class="pie-3d" id="pie-3d"></p>
+        <div class="fila descargas" id="descargas-3d"><span class="rotulo">Descargar imagen fija:</span></div>
+        </div>
+      </div>
+
+      <div role="tabpanel" class="panel-vista" id="panel-est" aria-labelledby="tab-est" hidden>
+        <h3><span class="num-vista">4.3</span> Análisis descriptivo de patrones angulares</h3>
+        <p class="nota" style="margin-top:0">Estadística descriptiva de los ángulos frontal (F) y lateral (L), separada por el
+          estado que reporta el dispositivo (BIEN o MAL), para ver en qué se diferencian las posturas de cada estado.</p>
+        <div class="metricas" id="est-cifras"></div>
+        <div class="controles" style="margin-top:16px">
+          <div class="control">Figura
+            <div class="segmentado" role="group" aria-label="Figura descriptiva">
+              <button type="button" data-est="histogramas" aria-pressed="true">Histogramas</button>
+              <button type="button" data-est="cajas" aria-pressed="false">Box plots</button>
+              <button type="button" data-est="violin" aria-pressed="false">Violin plots</button>
+              <button type="button" data-est="series" aria-pressed="false">Series temporales</button>
+            </div>
+          </div>
+        </div>
+        <div class="lienzo" id="lienzo-est">
+          <img id="figura-est" alt="Figura del análisis descriptivo">
+          <span class="estado" id="figura-est-estado">Generando figura…</span>
+        </div>
+        <p class="nota" id="nota-est"></p>
+        <div class="fila descargas" id="descargas-est"><span class="rotulo">Descargar figura:</span></div>
+        <div class="fila descargas" id="descargas-reporte"></div>
+
+        <h3 class="subtitulo">Estadísticos descriptivos <small>en grados</small></h3>
+        <div class="tabla-env tabla-est">
+          <table>
+            <thead id="est-cabecera"></thead>
+            <tbody id="est-tabla"></tbody>
+          </table>
+        </div>
+        <p class="nota">DE: desviación estándar muestral. RIC: rango intercuartílico (P75 − P25). Asimetría: negativa = cola
+          hacia valores bajos. Curtosis en exceso: 0 = como una normal; positiva = más concentrada con colas largas.</p>
+
+        <div class="dos-col">
+          <div>
+            <h3 class="subtitulo">Episodios <small>rachas consecutivas del mismo estado</small></h3>
+            <div class="tabla-env"><table style="min-width:0">
+              <thead><tr><th>Estado</th><th class="num">Episodios</th><th class="num">Media</th><th class="num">Mediana</th><th class="num">Más largo</th><th class="num">Total</th></tr></thead>
+              <tbody id="est-episodios"></tbody>
+            </table></div>
+          </div>
+          <div>
+            <h3 class="subtitulo">¿Por qué se marcó MAL? <small>umbral excedido</small></h3>
+            <div class="tabla-env"><table style="min-width:0">
+              <thead><tr><th>Causa</th><th class="num">Muestras</th><th class="num">%</th></tr></thead>
+              <tbody id="est-causas"></tbody>
+            </table></div>
+          </div>
+        </div>
+        <p class="nota">Una muestra MAL puede exceder dos umbrales a la vez, así que los porcentajes pueden sumar más de 100 %.</p>
+      </div>
+
+      <div role="tabpanel" class="panel-vista" id="panel-ergo" aria-labelledby="tab-ergo" hidden>
+        <h3><span class="num-vista">4.2</span> Análisis ergonómico (ISO 11226)</h3>
+        <p class="nota" style="margin-top:0">Clasificación de la postura del tronco en zonas óptima, aceptable y extrema
+          (<span id="ergo-fuente">BGIA-Report 2/2007 · ISO 11226 · EN 1005-4</span>), con la dispersión |σ| y el
+          desplazamiento |R| de la postura, y su comparación por momento del día y por sujeto.</p>
+        <div class="controles">
+          <div class="control">Figura
+            <div class="segmentado" role="group" aria-label="Figura ergonómica">
+              <button type="button" data-ergo="zonas" aria-pressed="true">Zonas ISO 11226</button>
+              <button type="button" data-ergo="momentos" aria-pressed="false">Momentos del día</button>
+              <button type="button" data-ergo="sujetos" aria-pressed="false">Por sujeto</button>
+              <button type="button" data-ergo="histogramas" aria-pressed="false">Histogramas</button>
+            </div>
+          </div>
+        </div>
+        <div class="lienzo" id="lienzo-ergo">
+          <img id="figura-ergo" alt="Figura del análisis ergonómico">
+          <span class="estado" id="figura-ergo-estado">Generando figura…</span>
+        </div>
+        <p class="nota" id="nota-ergo"></p>
+        <div class="fila descargas" id="descargas-ergo"><span class="rotulo">Descargar:</span></div>
+
+        <h3 class="subtitulo">Métricas de la selección <small id="ergo-alcance"></small></h3>
+        <div class="metricas" id="ergo-metricas"></div>
+        <p class="nota">|σ| = √(σα² + σβ²): cuánto se mueve la postura. |R| = √(α̅² + β̅²): qué tan lejos del cero
+          está la postura media. σG y RG: las mismas cifras divididas por las del conjunto completo (1 = igual que el grupo;
+          mayor que 1 = más que el grupo).</p>
+
+        <h3 class="subtitulo">Mañana, tarde y noche <small>¿la postura cambia según el momento del día?</small></h3>
+        <div class="tabla-env">
+          <table>
+            <thead><tr><th>Momento</th><th>Horario</th><th class="num">Muestras</th><th class="num">Tramos</th>
+              <th class="num">|σ|</th><th class="num">|R|</th><th class="num">σG medio</th><th class="num">RG medio</th>
+              <th class="num">% óptima</th><th class="num">% extrema</th></tr></thead>
+            <tbody id="ergo-momentos"></tbody>
+          </table>
+        </div>
+        <div class="anova" id="ergo-anova"></div>
+
+        <h3 class="subtitulo">Métricas por persona y sesión</h3>
+        <div class="tabla-env tabla-metricas">
+          <table>
+            <thead><tr><th>Grupo</th><th class="num">Muestras</th><th class="num">α̅ (°)</th><th class="num">β̅ (°)</th>
+              <th class="num">|σ| (°)</th><th class="num">|R| (°)</th><th class="num">σG</th><th class="num">RG</th>
+              <th class="num">% óptima</th><th class="num">% aceptable</th><th class="num">% extrema</th></tr></thead>
+            <tbody id="ergo-tabla"></tbody>
+          </table>
+        </div>
+        <div class="fila descargas" id="descargas-metricas"></div>
+        <p class="nota">El documento también relaciona la postura con el dolor percibido (regresión logística). El registro
+          del dispositivo no trae esa información, así que esa parte no se calcula aquí.</p>
+      </div>
     </section>
   </section>
 </main>
@@ -314,8 +508,13 @@
   let analisis = null;
   let metodo = "kde";
   let vista = "completo";     // completo | persona | sesion
+  let pestana = "densidad";   // densidad | ergo
+  let figuraErgo = "zonas";   // zonas | momentos | sujetos | histogramas
+  const desactualizada = { densidad: true, ergo: true, est: true };
+  const PANELES = { densidad: "panel-densidad", ergo: "panel-ergo", est: "panel-est" };
+  let figuraEst = "histogramas";   // histogramas | cajas | violin | series
 
-  const VERSION_API = 5;   // debe coincidir con VERSION_API en web/app.py
+  const VERSION_API = 8;   // debe coincidir con VERSION_API en web/app.py
   const NOMBRES_FORMATO ={ png: "PNG (300 ppp)", svg: "SVG", pdf: "PDF", jpg: "JPG" };
   const VEREDICTOS = {
     correcta: ["✓", "Estructura correcta", "El archivo cumple el formato esperado."],
@@ -601,6 +800,14 @@
         ...j.formatos.map((f) => botonDescarga(NOMBRES_FORMATO[f] || f.toUpperCase(),
           () => [`/api/figura.${f}`, { ...parametros(), descargar: "1" }])),
         botonDescarga("Datos (CSV)", () => ["/api/datos.csv", {}]));
+      $("descargas-ergo").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        ...j.formatos.map((f) => botonDescarga(NOMBRES_FORMATO[f] || f.toUpperCase(),
+          () => [`/api/ergonomia.${f}`, { ...parametros(), figura: figuraErgo, descargar: "1" }])));
+      $("descargas-3d").replaceChildren(el("span", { class: "rotulo", text: "Descargar imagen fija:" }),
+        ...j.formatos.map((f) => botonDescarga(NOMBRES_FORMATO[f] || f.toUpperCase(),
+          () => [`/api/figura3d.${f}`, { ...parametros(), descargar: "1" }])));
+      $("descargas-metricas").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        botonDescarga("Métricas (CSV)", () => ["/api/ergonomia/metricas.csv", parametros()]));
       cambiarVista("completo");
     }
     $("resultados").hidden = false;
@@ -633,11 +840,28 @@
           text: (varios ? `${quien} · ` : "") + `Sesión ${cuenta[s.archivo]} · ${s.inicio}–${s.fin} · ${plural(s.n_muestras, "muestra", "muestras")}` });
       }));
     }
-    actualizarFigura();
+    refrescar();
+  }
+
+  // Cambió un filtro: se actualiza la pestaña visible y la otra queda pendiente.
+  function refrescar() {
+    Object.keys(desactualizada).forEach((k) => { desactualizada[k] = true; });
+    actualizarPestana();
+  }
+  function actualizarPestana() {
+    if (!desactualizada[pestana]) return;
+    desactualizada[pestana] = false;
+    ({ densidad: actualizarDensidad, ergo: actualizarErgo, est: actualizarEst })[pestana]();
+  }
+  function cambiarPestana(nueva) {
+    pestana = nueva;
+    document.querySelectorAll("[data-pestana]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.pestana === pestana)));
+    for (const [clave, id] of Object.entries(PANELES)) $(id).hidden = clave !== pestana;
+    actualizarPestana();
   }
 
   function parametros() {
-    const p = { metodo };
+    const p = metodo === "3d" ? {} : { metodo };
     const v = $("elegido").value;
     if (vista === "sesion" && v) p.sesion = v;
     if (vista === "persona" && v) p.usuario = v;
@@ -645,27 +869,229 @@
     return p;
   }
 
-  let pedidoFigura = 0;      // solo se muestra la respuesta del último pedido
-  let urlFigura = null;
-  async function actualizarFigura() {
+  // Carga una figura en un lienzo; solo se muestra la respuesta del último pedido de ese lienzo.
+  const pedidos = {}, urls = {};
+  async function cargarFigura(idLienzo, idImg, idEstado, ruta, extra) {
     if (!analisis) return;
-    const yo = ++pedidoFigura;
-    const lienzo = $("lienzo"), img = $("figura"), estado = $("figura-estado");
+    const yo = pedidos[idLienzo] = (pedidos[idLienzo] || 0) + 1;
+    const lienzo = $(idLienzo), img = $(idImg), estado = $(idEstado);
     lienzo.classList.add("cargando");
     estado.hidden = false;
     estado.textContent = "Generando figura…";
     try {
-      const blob = await (await pedir("/api/figura.svg", parametros())).blob();
-      if (yo !== pedidoFigura) return;
-      if (urlFigura) URL.revokeObjectURL(urlFigura);
-      urlFigura = URL.createObjectURL(blob);
+      const blob = await (await pedir(ruta, extra)).blob();
+      if (yo !== pedidos[idLienzo]) return;
+      if (urls[idLienzo]) URL.revokeObjectURL(urls[idLienzo]);
+      urls[idLienzo] = URL.createObjectURL(blob);
       img.onload = () => { lienzo.classList.remove("cargando"); estado.hidden = true; };
-      img.src = urlFigura;
+      img.src = urls[idLienzo];
     } catch (err) {
-      if (yo !== pedidoFigura) return;
+      if (yo !== pedidos[idLienzo]) return;
       lienzo.classList.remove("cargando");
       estado.textContent = `No se pudo generar la figura. ${err.message}`;
     }
+  }
+  // 4.1: kernel y hexágonos son imágenes del servidor; tridimensional es la superficie que se gira.
+  function actualizarDensidad() {
+    const tres = metodo === "3d";
+    $("vista-2d").hidden = tres;
+    $("vista-3d").hidden = !tres;
+    if (tres) actualizar3d();
+    else cargarFigura("lienzo", "figura", "figura-estado", "/api/figura.svg", parametros());
+  }
+
+  // ---------- Mapa de densidad en 3D (Plotly, cargado solo al abrir la vista) ----------
+  let promesaPlotly = null, pedido3d = 0;
+  const CAMARA_3D = { eye: { x: -1.35, y: -1.65, z: 0.95 }, center: { x: 0, y: 0, z: -0.12 } };
+  function cargarPlotly(url) {
+    if (window.Plotly) return Promise.resolve(window.Plotly);
+    promesaPlotly ??= new Promise((ok, mal) => {
+      const s = document.createElement("script");
+      s.src = url;
+      s.onload = () => ok(window.Plotly);
+      s.onerror = () => { promesaPlotly = null; mal(new Error("No se pudo cargar la librería 3D (hace falta conexión a internet). La imagen fija de abajo sí se puede descargar.")); };
+      document.head.append(s);
+    });
+    return promesaPlotly;
+  }
+  async function actualizar3d() {
+    if (!analisis) return;
+    const yo = ++pedido3d, estado = $("estado-3d");
+    estado.hidden = false;
+    estado.textContent = "Generando superficie…";
+    try {
+      const m = await (await pedir("/api/densidad3d", parametros())).json();
+      const Plotly = await cargarPlotly(m.plotly_cdn);
+      if (yo !== pedido3d) return;
+      $("titulo-3d").textContent = m.titulo;
+      $("pie-3d").textContent = m.pie;
+      const div = $("plot-3d");
+      if (m.metodo === "vacio") {
+        Plotly.purge(div);
+        estado.textContent = "Sin muestras analizables para este filtro.";
+        return;
+      }
+      const [x0, x1] = m.umbrales.lateral, [y0, y1] = m.umbrales.frontal;
+      const paleta = m.paleta.charAt(0).toUpperCase() + m.paleta.slice(1);
+      const ejes = (titulo) => ({ title: { text: titulo }, gridcolor: "#e6e8eb", zerolinecolor: "#c9ced4", backgroundcolor: "#ffffff", showbackground: true });
+      await Plotly.react(div, [
+        { type: "surface", x: m.x, y: m.y, z: m.z, colorscale: paleta, cmin: 0, name: "Densidad",
+          colorbar: { title: { text: `Tiempo de permanencia<br>(${m.unidad})`, side: "right" }, thickness: 14, len: 0.75 },
+          contours: { z: { show: true, usecolormap: true, project: { z: true }, highlightcolor: "#ffffff" } },
+          hovertemplate: "Lateral %{x:.1f}°<br>Frontal %{y:.1f}°<br>%{z:.2f} " + m.unidad + "<extra></extra>" },
+        { type: "scatter3d", mode: "lines", name: `Umbrales de alerta (lateral ${x0}° a ${x1}°, frontal ${y0}° a ${y1}°)`,
+          x: [x0, x1, x1, x0, x0], y: [y0, y0, y1, y1, y0], z: [0, 0, 0, 0, 0],
+          line: { color: m.color_umbral, width: 6, dash: "dash" }, hoverinfo: "skip" },
+      ], {
+        margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: "#ffffff", font: { color: "#1f2328", size: 12 },
+        showlegend: true, legend: { x: 0.01, y: 0.99, bgcolor: "rgba(255,255,255,.85)" },
+        scene: {
+          xaxis: ejes("Lateral (°) ← izq. · der. →"), yaxis: ejes("Frontal (°) ← atrás · adelante →"),
+          zaxis: { ...ejes(m.unidad), rangemode: "tozero" },
+          aspectmode: "manual", aspectratio: { x: 1, y: 1, z: m.proporcion_altura }, camera: CAMARA_3D,
+        },
+      }, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["toImage"] });
+      estado.hidden = true;
+    } catch (err) {
+      if (yo === pedido3d) { estado.hidden = false; estado.textContent = `No se pudo generar la superficie. ${err.message}`; }
+    }
+  }
+  $("reiniciar-3d").addEventListener("click", () => window.Plotly && Plotly.relayout("plot-3d", { "scene.camera": CAMARA_3D }));
+  $("png-vista-3d").addEventListener("click", () => window.Plotly && $("plot-3d").data &&
+    Plotly.downloadImage("plot-3d", { format: "png", width: 1600, height: 1200, filename: "densidad3d_vista_actual" }));
+
+  // ---------- Análisis descriptivo (4.3) ----------
+  const NOMBRES_EST = { png: "PNG (300 ppp)", svg: "SVG (editable)", pdf: "PDF" };
+  const NOTAS_EST = {
+    histogramas: "Distribución de F y L con BIEN y MAL superpuestos, en barras de 1°. Líneas punteadas: umbrales de alerta.",
+    cajas: "Caja: P25 a P75; línea: mediana; rombo: media; bigotes hasta 1,5 × RIC; puntos: valores atípicos.",
+    violin: "La forma muestra cómo se reparten los valores; barra negra: P25 a P75; punto blanco: mediana. Con muy pocas muestras se dibujan los valores uno a uno.",
+    series: "F y L minuto a minuto desde la calibración, una fila por sesión; en rojo, los tramos MAL.",
+  };
+  let pedidoEst = 0;
+  function actualizarEst() {
+    $("nota-est").textContent = NOTAS_EST[figuraEst];
+    cargarFigura("lienzo-est", "figura-est", "figura-est-estado", "/api/analizar/estadistica.svg", { ...parametros(), figura: figuraEst });
+    cargarEstadistica();
+  }
+  async function cargarEstadistica() {
+    const yo = ++pedidoEst;
+    try {
+      const j = await (await pedir("/api/analizar/estadistica", parametros())).json();
+      if (yo === pedidoEst) pintarEst(j);
+    } catch (err) {
+      if (yo === pedidoEst) $("est-cifras").replaceChildren(el("p", { class: "nota", text: `No se pudieron calcular las estadísticas. ${err.message}` }));
+    }
+  }
+  const seg = (x) => x === null || x === undefined ? "—" : x >= 60 ? `${num(x / 60, 1)} min` : `${num(x, 1)} s`;
+  function pintarEst(j) {
+    const ep = j.episodios;
+    const cifra = (v, t) => el("div", { class: "metrica" }, el("div", { class: "valor", text: v }), el("div", { class: "rotulo", text: t }));
+    $("est-cifras").replaceChildren(
+      cifra(fmt(j.n), "Muestras analizadas"),
+      el("div", { class: "metrica zona z-extrema" }, el("div", { class: "valor", text: pct(j.pct_mal) }),
+        el("div", { class: "rotulo", text: `MAL · ${fmt(j.conteo.MAL)} muestras` }),
+        el("div", { class: "barra" }, Object.assign(el("span"), { style: `width:${j.pct_mal || 0}%` }))),
+      cifra(fmt(ep.MAL.n_episodios), "Episodios MAL"),
+      cifra(seg(ep.MAL.duracion_media_s), "Duración media de un episodio MAL"),
+      cifra(seg(ep.MAL.duracion_max_s), "Episodio MAL más largo"),
+      cifra(seg(ep.BIEN.duracion_media_s), "Duración media de un episodio BIEN"));
+
+    if (!$("descargas-est").dataset.listo) {
+      $("descargas-est").dataset.listo = "1";
+      $("descargas-est").replaceChildren(el("span", { class: "rotulo", text: "Descargar figura:" }),
+        ...j.formatos.map((f) => botonDescarga(NOMBRES_EST[f] || f.toUpperCase(),
+          () => [`/api/analizar/estadistica.${f}`, { ...parametros(), figura: figuraEst, descargar: "1" }])));
+      $("descargas-reporte").replaceChildren(el("span", { class: "rotulo", text: "Reporte:" }),
+        botonDescarga("Reporte completo (PDF)", () => ["/api/analizar/estadistica/reporte.pdf", parametros()]),
+        botonDescarga("Estadísticos (CSV)", () => ["/api/analizar/estadistica.csv", parametros()]));
+    }
+
+    const pcts = j.percentiles.map((p) => String(p).replace(/\.0$/, ""));
+    $("est-cabecera").replaceChildren(el("tr", {}, ...["Ángulo", "Grupo", "n", "Media", "DE", "Mín", ...pcts.map((p) => `P${p}`), "Máx", "RIC", "Asimetría", "Curtosis"]
+      .map((t, i) => el("th", { class: i > 1 ? "num" : "", text: t }))));
+    const colores = { BIEN: "#2f8f46", MAL: "#c2410c" };
+    $("est-tabla").replaceChildren(...j.descriptivos.map((f) => el("tr", { class: `g-${f.grupo}${f.grupo === "Todos" ? " primera" : ""}` },
+      el("td", { text: f.grupo === "Todos" ? (f.angulo === "frontal" ? "Frontal F" : "Lateral L") : "" }),
+      el("td", {}, ...(colores[f.grupo] ? [Object.assign(el("span", { class: "punto-estado" }), { style: `background:${colores[f.grupo]}` })] : []), document.createTextNode(f.grupo)),
+      el("td", { class: "num", text: fmt(f.n) }),
+      ...[f.media, f.sd, f.min, ...pcts.map((p) => f.percentiles[p]), f.max, f.iqr].map((v) => el("td", { class: "num", text: num(v) })),
+      el("td", { class: "num", text: num(f.asimetria, 3) }), el("td", { class: "num", text: num(f.curtosis, 3) }))));
+
+    $("est-episodios").replaceChildren(...["BIEN", "MAL"].map((e) => el("tr", {},
+      el("td", {}, Object.assign(el("span", { class: "punto-estado" }), { style: `background:${colores[e]}` }), document.createTextNode(e)),
+      el("td", { class: "num", text: fmt(ep[e].n_episodios) }), el("td", { class: "num", text: seg(ep[e].duracion_media_s) }),
+      el("td", { class: "num", text: seg(ep[e].duracion_mediana_s) }), el("td", { class: "num", text: seg(ep[e].duracion_max_s) }),
+      el("td", { class: "num", text: seg(ep[e].tiempo_total_s) }))));
+    $("est-causas").replaceChildren(...j.causas_mal.map((c) => el("tr", {},
+      el("td", { text: c.descripcion }), el("td", { class: "num", text: fmt(c.n) }), el("td", { class: "num", text: pct(c.pct) }))));
+  }
+
+  // ---------- Análisis ergonómico ----------
+  const NOTAS_ERGO = {
+    zonas: "Fondo: zonas ISO 11226. Color: tiempo de permanencia. Círculo rojo punteado: |σ| alrededor de la postura media; flecha verde: |R| desde el cero. La silueta (persona vista desde arriba frente al escritorio) solo orienta: adelante es hacia arriba.",
+    momentos: "Un panel por momento del día según la hora de cada medición, con la misma escala de color para comparar la forma de la postura.",
+    sujetos: "Un panel por persona (o por sesión si no hay al menos dos personas), siempre con todos los datos subidos, con la misma escala de color.",
+    histogramas: "Frecuencia de cada ángulo por separado, con barras de 1° coloreadas según su zona.",
+  };
+  const num = (x, d = 2) => (x === null || x === undefined) ? "—" : Number(x).toLocaleString("es", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pct = (x) => (x === null || x === undefined) ? "—" : `${num(x, 1)} %`;
+
+  let pedidoMetricas = 0;
+  function actualizarErgo() {
+    $("nota-ergo").textContent = NOTAS_ERGO[figuraErgo];
+    cargarFigura("lienzo-ergo", "figura-ergo", "figura-ergo-estado", "/api/ergonomia.svg", { ...parametros(), figura: figuraErgo });
+    cargarMetricas();
+  }
+  async function cargarMetricas() {
+    const yo = ++pedidoMetricas;
+    try {
+      const j = await (await pedir("/api/ergonomia/metricas", parametros())).json();
+      if (yo === pedidoMetricas) pintarErgo(j);
+    } catch (err) {
+      if (yo === pedidoMetricas) $("ergo-metricas").replaceChildren(el("p", { class: "nota", text: `No se pudieron calcular las métricas. ${err.message}` }));
+    }
+  }
+  function pintarErgo(j) {
+    const s = j.seleccion, nz = j.nombres_zona;
+    $("ergo-fuente").textContent = j.fuente;
+    const sel = $("elegido");
+    $("ergo-alcance").textContent = vista === "completo" ? "· conjunto completo" : `· ${sel.options[sel.selectedIndex]?.text.split(" · ").slice(0, vista === "sesion" ? 2 : 1).join(" · ") || ""}`;
+    const zona = (z) => el("div", { class: `metrica zona z-${z}` },
+      el("div", { class: "valor", text: pct(s.pct_zona[z]) }), el("div", { class: "rotulo", text: nz[z] }),
+      el("div", { class: "barra" }, Object.assign(el("span"), { style: `width:${s.pct_zona[z] || 0}%` })));
+    const cifra = (v, t) => el("div", { class: "metrica" }, el("div", { class: "valor", text: v }), el("div", { class: "rotulo", text: t }));
+    $("ergo-metricas").replaceChildren(
+      zona("optima"), zona("aceptable"), zona("extrema"),
+      cifra(s.n ? `${num(s.dispersion)}°` : "—", "|σ| dispersión"),
+      cifra(s.n ? `${num(s.desplazamiento)}°` : "—", "|R| desplazamiento"),
+      cifra(num(s.sigma_g, 3), "σG (vs. conjunto)"),
+      cifra(num(s.r_g, 3), "RG (vs. conjunto)"),
+      cifra(fmt(s.n), "Muestras analizadas"));
+
+    const m = j.momentos;
+    $("ergo-momentos").replaceChildren(...m.momentos.map((x) => el("tr", {},
+      el("td", { text: x.nombre }), el("td", { text: `${String(x.desde).padStart(2, "0")}–${String(x.hasta).padStart(2, "0")} h` }),
+      el("td", { class: "num", text: fmt(x.n_muestras) }), el("td", { class: "num", text: fmt(x.n_tramos) }),
+      el("td", { class: "num", text: num(x.dispersion) }), el("td", { class: "num", text: num(x.desplazamiento) }),
+      el("td", { class: "num", text: num(x.sigma_g_media, 3) }), el("td", { class: "num", text: num(x.r_g_media, 3) }),
+      el("td", { class: "num", text: pct(x.pct_zona.optima) }), el("td", { class: "num", text: pct(x.pct_zona.extrema) }))));
+    const anova = (nombre, a) => el("div", {}, el("strong", { text: `ANOVA de ${nombre}: ` }),
+      document.createTextNode(a.p === null ? `no calculable. ${a.motivo}`
+        : `p = ${num(a.p, 4)} (F = ${num(a.f, 3)}). ${a.significativo
+          ? `Menor que ${m.alfa}: hay diferencias significativas entre momentos.`
+          : `Mayor o igual que ${m.alfa}: no hay evidencia suficiente de diferencias entre momentos.`}`));
+    $("ergo-anova").replaceChildren(anova("σG", m.anova_sigma_g), anova("RG", m.anova_r_g),
+      el("p", { class: "nota", style: "margin:0", text: `Cada observación es un tramo de una sesión dentro de un momento, con al menos ${m.min_muestras_tramo} muestras.` }));
+
+    $("ergo-tabla").replaceChildren(...j.filas.map((f) => el("tr", { class: `t-${f.tipo}` },
+      el("td", {}, f.tipo === "sesion" ? el("code", { class: "lit", text: f.etiqueta }) : document.createTextNode(f.tipo === "persona" ? `Persona: ${f.etiqueta}` : f.etiqueta)),
+      el("td", { class: "num", text: fmt(f.n) }),
+      el("td", { class: "num", text: num(f.media_frontal) }), el("td", { class: "num", text: num(f.media_lateral) }),
+      el("td", { class: "num", text: num(f.dispersion) }), el("td", { class: "num", text: num(f.desplazamiento) }),
+      el("td", { class: "num", text: num(f.sigma_g, 3) }), el("td", { class: "num", text: num(f.r_g, 3) }),
+      el("td", { class: "num", text: pct(f.pct_zona.optima) }), el("td", { class: "num", text: pct(f.pct_zona.aceptable) }),
+      el("td", { class: "num", text: pct(f.pct_zona.extrema) }))));
   }
 
   // Botón que pide el archivo al servidor y lo baja con el nombre que este indique.
@@ -695,12 +1121,25 @@
   }
 
   document.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => cambiarVista(b.dataset.vista)));
-  $("elegido").addEventListener("change", actualizarFigura);
-  $("sin-calibrar").addEventListener("change", actualizarFigura);
+  $("elegido").addEventListener("change", refrescar);
+  $("sin-calibrar").addEventListener("change", refrescar);
+  document.querySelectorAll("[data-pestana]").forEach((b) => b.addEventListener("click", () => cambiarPestana(b.dataset.pestana)));
   document.querySelectorAll("[data-metodo]").forEach((b) => b.addEventListener("click", () => {
     metodo = b.dataset.metodo;
     document.querySelectorAll("[data-metodo]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    actualizarFigura();
+    actualizarDensidad();
+  }));
+  document.querySelectorAll("[data-est]").forEach((b) => b.addEventListener("click", () => {
+    figuraEst = b.dataset.est;
+    document.querySelectorAll("[data-est]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("nota-est").textContent = NOTAS_EST[figuraEst];
+    cargarFigura("lienzo-est", "figura-est", "figura-est-estado", "/api/analizar/estadistica.svg", { ...parametros(), figura: figuraEst });
+  }));
+  document.querySelectorAll("[data-ergo]").forEach((b) => b.addEventListener("click", () => {
+    figuraErgo = b.dataset.ergo;
+    document.querySelectorAll("[data-ergo]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("nota-ergo").textContent = NOTAS_ERGO[figuraErgo];
+    cargarFigura("lienzo-ergo", "figura-ergo", "figura-ergo-estado", "/api/ergonomia.svg", { ...parametros(), figura: figuraErgo });
   }));
 })();
 </script>
