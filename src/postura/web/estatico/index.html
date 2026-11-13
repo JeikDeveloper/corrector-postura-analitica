@@ -225,6 +225,35 @@
   .tabla-est tr.g-Todos td { font-weight: 600; }
   .tabla-est tr.primera td { border-top: 2px solid var(--borde); }
   .punto-estado { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  /* 4.4 Analítica diagnóstica */
+  .narracion { border: 1px solid var(--borde); border-radius: 10px; padding: 18px 20px; background: var(--fondo); }
+  .narracion .titular { font-size: 19px; font-weight: 650; line-height: 1.35; margin: 0 0 8px; color: var(--texto); }
+  .narracion .contexto { font-size: 13px; color: var(--texto-2); margin: 0 0 14px; }
+  .narracion h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-3); margin: 16px 0 6px; }
+  .narracion ol, .narracion ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+  .narracion li strong { color: var(--texto); }
+  .narracion .significado { font-size: 15px; margin: 0; padding: 10px 14px; border-left: 3px solid var(--acento); background: var(--superficie); border-radius: 0 8px 8px 0; }
+  .narracion .limitaciones li { color: var(--texto-2); }
+  .tarjetas-ind { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .tarjeta-ind { border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; font-size: 13px; }
+  .tarjeta-ind .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tarjeta-ind .n { font-weight: 600; margin-bottom: 4px; }
+  .tarjeta-ind .f { font-family: var(--mono); font-size: 12px; background: var(--fondo); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 4px 0; }
+  .tarjeta-ind p { margin: 4px 0 0; color: var(--texto-2); }
+  .tarjeta-ind .lectura { color: var(--texto); font-size: 13.5px; margin: 6px 0 4px; }
+  .tarjeta-ind details { margin-top: 6px; font-size: 12.5px; }
+  .tarjeta-ind summary { cursor: pointer; color: var(--texto-3); }
+  .narracion .tarjeta-ind { background: var(--superficie); }
+  details.por-sesion { margin-top: 14px; }
+  details.por-sesion > summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
+  /* 4.5 Confiabilidad */
+  .alertas-conf { display: grid; gap: 8px; margin: 4px 0 14px; }
+  .alerta-c { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; font-size: 13.5px;
+    border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); background: color-mix(in srgb, var(--c) 10%, var(--superficie)); }
+  .alerta-c .nivel { flex: none; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: #fff; background: var(--c); }
+  .alerta-c .origen { color: var(--texto-2); font-size: 12px; }
+  .sev-critica { --c: #a40e26; } .sev-alta { --c: #d1242f; } .sev-media { --c: #b88a00; } .sev-ok { --c: var(--ok); }
+  .estado-modelos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   .tabla-metricas tr.t-sesion td:first-child { padding-left: 22px; }
   [hidden] { display: none !important; }
@@ -341,6 +370,18 @@
           <span class="marca-vista">✓ Viendo</span>
           <span class="desc-vista">Estadística de F y L en BIEN vs MAL: percentiles, histogramas, box plots, violin plots y series temporales.</span>
         </button>
+        <button type="button" role="tab" id="tab-diag" aria-controls="panel-diag" aria-selected="false" data-pestana="diag">
+          <span class="num-vista">4.4</span>
+          <span class="titulo-vista">Analítica diagnóstica</span>
+          <span class="marca-vista">✓ Viendo</span>
+          <span class="desc-vista">Narración de datos e indicadores descriptivos: qué pasó, por qué importa y qué revisar.</span>
+        </button>
+        <button type="button" role="tab" id="tab-conf" aria-controls="panel-conf" aria-selected="false" data-pestana="conf">
+          <span class="num-vista">4.5</span>
+          <span class="titulo-vista">Confiabilidad y tasa de fallos</span>
+          <span class="marca-vista">✓ Viendo</span>
+          <span class="desc-vista">MTBF, MTTR, disponibilidad, Weibull, anomalías (Isolation Forest) y predicción de fallos con alertas.</span>
+        </button>
       </div>
 
       <div role="tabpanel" class="panel-vista" id="panel-densidad" aria-labelledby="tab-densidad">
@@ -375,6 +416,102 @@
         <p class="pie-3d" id="pie-3d"></p>
         <div class="fila descargas" id="descargas-3d"><span class="rotulo">Descargar imagen fija:</span></div>
         </div>
+      </div>
+
+      <div role="tabpanel" class="panel-vista" id="panel-conf" aria-labelledby="tab-conf" hidden>
+        <h3><span class="num-vista">4.5</span> Confiabilidad y tasa de fallos</h3>
+        <div class="controles">
+          <div class="control">Qué cuenta como fallo
+            <div class="segmentado" role="group" aria-label="Tipo de fallo">
+              <button type="button" data-modo="dispositivo" aria-pressed="true">Fallos del dispositivo</button>
+              <button type="button" data-modo="postura" aria-pressed="false">Fallos posturales</button>
+            </div>
+          </div>
+        </div>
+        <p class="nota" id="conf-definicion" style="margin-top:-6px"></p>
+
+        <h3 class="subtitulo">Alertas <small>de la más a la menos severa</small></h3>
+        <div class="alertas-conf" id="conf-alertas"></div>
+        <div class="estado-modelos" id="conf-modelos"></div>
+
+        <div class="metricas" id="conf-metricas"></div>
+        <p class="nota">MTBF: tiempo medio de operación entre fallos. MTTR: tiempo medio hasta recuperarse de un fallo.
+          Disponibilidad: operación / (operación + recuperación). Tasa de fallos: fallos por hora de operación.</p>
+
+        <div class="controles" style="margin-top:14px">
+          <div class="control">Figura
+            <div class="segmentado" role="group" aria-label="Figura de confiabilidad">
+              <button type="button" data-conf="fallos" aria-pressed="true">Fallos en el tiempo</button>
+              <button type="button" data-conf="weibull" aria-pressed="false">Weibull</button>
+              <button type="button" data-conf="anomalias" aria-pressed="false">Anomalías</button>
+              <button type="button" data-conf="prediccion" aria-pressed="false">Predicción</button>
+            </div>
+          </div>
+        </div>
+        <div class="lienzo" id="lienzo-conf">
+          <img id="figura-conf" alt="Figura de confiabilidad">
+          <span class="estado" id="figura-conf-estado">Generando figura…</span>
+        </div>
+        <div class="fila descargas" id="descargas-conf"><span class="rotulo">Descargar:</span></div>
+
+        <div class="dos-col">
+          <div>
+            <h3 class="subtitulo">Weibull <small>proyección de degradación</small></h3>
+            <p id="conf-weibull" style="font-size:14px;margin:0"></p>
+          </div>
+          <div>
+            <h3 class="subtitulo">Riesgo de fallo inminente <small>regresión logística</small></h3>
+            <div id="conf-prediccion" style="font-size:14px"></div>
+          </div>
+        </div>
+        <h3 class="subtitulo">Fallos registrados</h3>
+        <div class="tabla-env"><table>
+          <thead><tr><th>Tipo</th><th>Archivo</th><th>Sesión</th><th class="num">Línea</th><th class="num">Minuto de operación</th><th class="num">Recuperación</th><th>Detalle</th></tr></thead>
+          <tbody id="conf-fallos"></tbody>
+        </table></div>
+        <h3 class="subtitulo">Por sesión</h3>
+        <div class="tabla-env"><table>
+          <thead><tr><th>Sesión</th><th class="num">Fallos</th><th class="num">Operación (min)</th><th class="num">MTBF (min)</th><th class="num">MTTR (s)</th><th class="num">Disponibilidad</th><th class="num">Fallos/h</th></tr></thead>
+          <tbody id="conf-sesiones"></tbody>
+        </table></div>
+      </div>
+
+      <div role="tabpanel" class="panel-vista" id="panel-diag" aria-labelledby="tab-diag" hidden>
+        <h3><span class="num-vista">4.4</span> Analítica diagnóstica</h3>
+        <article class="narracion" id="narracion" aria-live="polite">
+          <p class="titular" id="nar-titular">Generando narración…</p>
+          <p class="contexto" id="nar-contexto"></p>
+          <h4>Indicadores</h4>
+          <div class="tarjetas-ind" id="diag-indicadores"></div>
+          <h4>Gráfico</h4>
+          <div class="lienzo" id="lienzo-nar">
+            <img id="figura-nar" alt="Gráfico que acompaña a la narración">
+            <span class="estado" id="figura-nar-estado">Generando figura…</span>
+          </div>
+          <h4>Otros hallazgos</h4>
+          <ol id="nar-hallazgos"></ol>
+          <h4>Qué significa</h4>
+          <p class="significado" id="nar-significado"></p>
+          <div class="dos-col">
+            <div><h4>Qué revisar</h4><ul id="nar-revisar"></ul></div>
+            <div><h4>Limitaciones</h4><ul class="limitaciones" id="nar-limitaciones"></ul></div>
+          </div>
+        </article>
+        <p class="nota">Narración de datos generada a partir de la selección. Cada cifra aparece una sola vez: los valores están
+          en los indicadores y el texto los interpreta. Las palabras («frecuentes», «breves», «estable»…) dependen de umbrales de la
+          configuración. Las sugerencias son puntos a revisar en el puesto de trabajo, no diagnósticos médicos.</p>
+        <div class="fila descargas" id="descargas-nar"><span class="rotulo">Descargar:</span></div>
+
+        <details class="por-sesion">
+          <summary>Indicadores por sesión</summary>
+          <div class="tabla-env">
+            <table>
+              <thead id="diag-cabecera"></thead>
+              <tbody id="diag-tabla"></tbody>
+            </table>
+          </div>
+          <div class="fila descargas" id="descargas-ind"><span class="rotulo">Descargar:</span></div>
+        </details>
       </div>
 
       <div role="tabpanel" class="panel-vista" id="panel-est" aria-labelledby="tab-est" hidden>
@@ -510,11 +647,12 @@
   let vista = "completo";     // completo | persona | sesion
   let pestana = "densidad";   // densidad | ergo
   let figuraErgo = "zonas";   // zonas | momentos | sujetos | histogramas
-  const desactualizada = { densidad: true, ergo: true, est: true };
-  const PANELES = { densidad: "panel-densidad", ergo: "panel-ergo", est: "panel-est" };
+  const desactualizada = { densidad: true, ergo: true, est: true, diag: true, conf: true };
+  const PANELES = { densidad: "panel-densidad", ergo: "panel-ergo", est: "panel-est", diag: "panel-diag", conf: "panel-conf" };
+  let modoConf = "dispositivo", figuraConf = "fallos";
   let figuraEst = "histogramas";   // histogramas | cajas | violin | series
 
-  const VERSION_API = 8;   // debe coincidir con VERSION_API en web/app.py
+  const VERSION_API = 11;   // debe coincidir con VERSION_API en web/app.py
   const NOMBRES_FORMATO ={ png: "PNG (300 ppp)", svg: "SVG", pdf: "PDF", jpg: "JPG" };
   const VEREDICTOS = {
     correcta: ["✓", "Estructura correcta", "El archivo cumple el formato esperado."],
@@ -851,7 +989,7 @@
   function actualizarPestana() {
     if (!desactualizada[pestana]) return;
     desactualizada[pestana] = false;
-    ({ densidad: actualizarDensidad, ergo: actualizarErgo, est: actualizarEst })[pestana]();
+    ({ densidad: actualizarDensidad, ergo: actualizarErgo, est: actualizarEst, diag: actualizarDiag, conf: actualizarConf })[pestana]();
   }
   function cambiarPestana(nueva) {
     pestana = nueva;
@@ -959,6 +1097,170 @@
   $("reiniciar-3d").addEventListener("click", () => window.Plotly && Plotly.relayout("plot-3d", { "scene.camera": CAMARA_3D }));
   $("png-vista-3d").addEventListener("click", () => window.Plotly && $("plot-3d").data &&
     Plotly.downloadImage("plot-3d", { format: "png", width: 1600, height: 1200, filename: "densidad3d_vista_actual" }));
+
+  // ---------- Confiabilidad (4.5) ----------
+  const DEFINICION_MODO = {
+    dispositivo: "Fallo = pérdida de conexión, conexión fallida, hueco de datos (intervalo mayor al umbral de hueco) o sesión sin cierre. "
+      + "Un «Connection lost» justo después de un APAGADO no cuenta: es la desconexión esperada al apagar. Operación = tiempo con datos.",
+    postura: "Fallo = cada episodio MAL. Operación = tiempo en BIEN; recuperación = lo que tarda en volver a BIEN.",
+  };
+  const NIVEL = { critica: "Crítica", alta: "Alta", media: "Media" };
+  const NOMBRES_TIPO_SEV = { critica: "sev-critica", alta: "sev-alta", media: "sev-media" };
+  let pedidoConf = 0;
+  const confParams = () => ({ ...parametros(), modo: modoConf });
+  const cargarFiguraConf = () => cargarFigura("lienzo-conf", "figura-conf", "figura-conf-estado", "/api/confiabilidad/figura.svg",
+    { ...confParams(), figura: figuraConf });
+  function actualizarConf() {
+    $("conf-definicion").textContent = DEFINICION_MODO[modoConf];
+    cargarFiguraConf();
+    cargarConf();
+  }
+  async function cargarConf() {
+    const yo = ++pedidoConf;
+    $("conf-alertas").replaceChildren(el("p", { class: "nota", text: "Calculando…" }));
+    try {
+      const j = await (await pedir("/api/confiabilidad/resumen", confParams())).json();
+      if (yo === pedidoConf) pintarConf(j);
+    } catch (err) {
+      if (yo === pedidoConf) $("conf-alertas").replaceChildren(el("p", { class: "nota", text: `No se pudo calcular. ${err.message}` }));
+    }
+  }
+  function pintarConf(j) {
+    const m = j.metricas, w = j.weibull, an = j.anomalias, pr = j.prediccion;
+    $("conf-alertas").replaceChildren(...(j.alertas.length ? j.alertas.map((a) => el("div", { class: `alerta-c ${NOMBRES_TIPO_SEV[a.severidad]}`, role: "alert" },
+      el("span", { class: "nivel", text: NIVEL[a.severidad] }),
+      el("div", {}, el("div", { class: "origen", text: a.origen }), el("div", { text: a.texto }))))
+      : [el("div", { class: "alerta-c sev-ok" }, el("span", { class: "nivel", text: "Sin alertas" }),
+          el("div", { text: "Ninguna anomalía de severidad media o mayor ni riesgo de fallo inminente con los modelos disponibles." }))]));
+    const chip = (ok, texto) => el("span", { class: `chip ${ok ? "ok" : "info"}`, text: texto });
+    $("conf-modelos").replaceChildren(
+      chip(w.ajustado, w.ajustado ? `Weibull ajustado (${w.n_observados} fallos)` : "Weibull: datos insuficientes"),
+      chip(an.aplicado, an.aplicado ? `Isolation Forest: ${j.n_ventanas} ventanas` : "Isolation Forest: datos insuficientes"),
+      chip(pr.entrenado, pr.entrenado ? `Regresión logística: AUC ${num(pr.auc, 2)}` : "Regresión logística: datos insuficientes"));
+    const cifra = (v, t) => el("div", { class: "metrica" }, el("div", { class: "valor", text: v }), el("div", { class: "rotulo", text: t }));
+    $("conf-metricas").replaceChildren(
+      cifra(fmt(m.n_fallos), Object.entries(m.por_tipo).map(([k, v]) => `${k}: ${v}`).join(" · ") || "Fallos"),
+      cifra(m.mtbf_min === null ? "—" : `${num(m.mtbf_min, 2)} min`, "MTBF"),
+      cifra(m.mttr_s === null ? "—" : `${num(m.mttr_s, 1)} s`, `MTTR (${m.reparaciones_conocidas} recuperaciones conocidas)`),
+      cifra(m.disponibilidad_pct === null ? "—" : `${num(m.disponibilidad_pct, 2)} %`, "Disponibilidad"),
+      cifra(m.tasa_fallos_h === null ? "—" : num(m.tasa_fallos_h, 2), "Tasa de fallos (por hora)"),
+      cifra(`${num(m.operacion_min, 1)} min`, "Tiempo de operación"));
+    $("conf-weibull").textContent = w.ajustado
+      ? `β = ${num(w.beta, 3)}, η = ${num(w.eta_min, 2)} min. ${w.lectura} Tiempo medio hasta el fallo: ${num(w.mttf_min, 2)} min; `
+        + `el 10 % falla antes de ${num(w.b10_min, 2)} min (B10). Probabilidad de fallar en los próximos ${w.horizonte_min} min: ${pct(100 * w.prob_fallo_horizonte)}.`
+      : `No ajustado: ${w.motivo}`;
+    $("conf-prediccion").replaceChildren(...(pr.entrenado ? [
+      el("p", { style: "margin:0 0 6px", text: `AUC ${num(pr.auc, 3)} (validación cruzada, ${pr.pliegues} pliegues) · sensibilidad ${num(pr.sensibilidad, 2)} · `
+        + `especificidad ${num(pr.especificidad, 2)}. Variables con más peso: ${pr.coeficientes.slice(0, 3).map((c) => c.caracteristica).join(", ")}.` }),
+      el("ul", { style: "margin:0;padding-left:18px" }, ...pr.riesgo.map((r) => el("li", { text:
+        `${r.sesion_id}: ${pct(100 * r.probabilidad)} en su última ventana${r.alerta ? " — ALERTA" : ""}` })))]
+      : [el("p", { style: "margin:0", text: `No entrenado: ${pr.motivo}` })]));
+    $("conf-fallos").replaceChildren(...(j.fallos.length ? j.fallos.map((f) => el("tr", {},
+      el("td", { text: f.tipo }), el("td", { text: f.archivo }), el("td", { text: f.sesion_id || "—" }),
+      el("td", { class: "num", text: f.linea ?? "—" }), el("td", { class: "num", text: num(f.reloj_min, 2) }),
+      el("td", { class: "num", text: f.reparacion_s === null ? "sin dato" : `${num(f.reparacion_s, 1)} s` }),
+      el("td", {}, el("code", { class: "lit", text: f.detalle }))))
+      : [el("tr", {}, el("td", { colspan: "7", text: "Sin fallos en la selección." }))]));
+    $("conf-sesiones").replaceChildren(...j.por_sesion.map((x) => el("tr", {},
+      el("td", {}, el("code", { class: "lit", style: "white-space:nowrap;word-break:normal", text: x.sesion_id })),
+      el("td", { class: "num", text: fmt(x.n_fallos) }), el("td", { class: "num", text: num(x.operacion_min, 2) }),
+      el("td", { class: "num", text: num(x.mtbf_min, 2) }), el("td", { class: "num", text: num(x.mttr_s, 1) }),
+      el("td", { class: "num", text: x.disponibilidad_pct === null ? "—" : pct(x.disponibilidad_pct) }),
+      el("td", { class: "num", text: num(x.tasa_fallos_h, 2) }))));
+    if (!$("descargas-conf").dataset.listo) {
+      $("descargas-conf").dataset.listo = "1";
+      $("descargas-conf").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        ...j.formatos.map((f) => botonDescarga(NOMBRES_EST[f] || f.toUpperCase(),
+          () => [`/api/confiabilidad/figura.${f}`, { ...confParams(), figura: figuraConf, descargar: "1" }])),
+        botonDescarga("Informe (PDF)", () => ["/api/confiabilidad/informe.pdf", confParams()]),
+        botonDescarga("Fallos (CSV)", () => ["/api/confiabilidad/fallos.csv", confParams()]));
+    }
+  }
+  document.querySelectorAll("[data-modo]").forEach((b) => b.addEventListener("click", () => {
+    modoConf = b.dataset.modo;
+    document.querySelectorAll("[data-modo]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    actualizarConf();
+  }));
+  document.querySelectorAll("[data-conf]").forEach((b) => b.addEventListener("click", () => {
+    figuraConf = b.dataset.conf;
+    document.querySelectorAll("[data-conf]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    cargarFiguraConf();
+  }));
+
+  // ---------- Analítica diagnóstica (4.4) ----------
+  let pedidoDiag = 0, ultimoDiag = null;
+  const celda = (v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "number") return Number.isInteger(v) ? fmt(v) : v.toLocaleString("es", { maximumFractionDigits: 3 });
+    return String(v);
+  };
+  const valorInd = (i) => i.valor === null ? "—" : `${celda(i.valor)} ${i.unidad}`;
+  function actualizarDiag() {
+    // En la página el gráfico va sin título: el titular ya está arriba. El que se descarga sí lo lleva.
+    cargarFigura("lienzo-nar", "figura-nar", "figura-nar-estado", "/api/diagnostica/figura.svg",
+      { ...parametros(), figura: "narrativa", titulo: "0" });
+    cargarDiag();
+  }
+  async function cargarDiag() {
+    const yo = ++pedidoDiag;
+    $("nar-titular").textContent = "Generando narración…";
+    try {
+      const j = await (await pedir("/api/diagnostica", parametros())).json();
+      if (yo === pedidoDiag) pintarDiag(j);
+    } catch (err) {
+      if (yo === pedidoDiag) $("nar-titular").textContent = `No se pudo generar la narración. ${err.message}`;
+    }
+  }
+  const lista = (id, items) => $(id).replaceChildren(...(items.length ? items : ["—"]).map((t) => el("li", { text: t })));
+  function textoNarracion(j) {
+    const n = j.narracion;
+    return [n.titular, "", n.contexto, "", "Indicadores:", ...j.indicadores.map((i) => `- ${i.nombre}: ${valorInd(i)}. ${i.lectura || ""}`),
+      "", "Otros hallazgos:", ...n.hallazgos.map((h) => `- ${h.tema}: ${h.texto}`),
+      "", `Qué significa: ${n.significado || "—"}`, "", "Qué revisar:", ...n.recomendaciones.map((r) => `- ${r}`),
+      "", "Limitaciones:", ...n.limitaciones.map((l) => `- ${l}`)].join("\n");
+  }
+  function pintarDiag(j) {
+    const n = j.narracion;
+    ultimoDiag = j;
+    $("nar-titular").textContent = n.titular;
+    $("nar-contexto").textContent = n.contexto;
+    $("diag-indicadores").replaceChildren(...j.indicadores.map((i) => el("div", { class: "tarjeta-ind" },
+      el("div", { class: "n", text: i.nombre }),
+      el("div", { class: "v", text: valorInd(i) }),
+      ...(i.lectura ? [el("p", { class: "lectura", text: i.lectura })] : []),
+      el("details", {}, el("summary", { text: "Cómo se calcula" }),
+        el("span", { class: "f", text: i.formula }), el("p", { text: i.definicion }),
+        el("p", { text: `En general: ${i.interpretacion}` })))));
+    $("nar-hallazgos").replaceChildren(...(n.hallazgos.length ? n.hallazgos.map((h) =>
+      el("li", {}, el("strong", { text: `${h.tema}: ` }), document.createTextNode(h.texto))) : [el("li", { text: "Ninguno." })]));
+    $("nar-significado").textContent = n.significado || "—";
+    lista("nar-revisar", n.recomendaciones);
+    lista("nar-limitaciones", n.limitaciones);
+
+    if (!$("descargas-nar").dataset.listo) {
+      $("descargas-nar").dataset.listo = "1";
+      const copiar = el("button", { type: "button", text: "Copiar narración" });
+      copiar.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(textoNarracion(ultimoDiag)); notificar("ok", "Narración copiada al portapapeles"); }
+        catch { notificar("error", "No se pudo copiar: el navegador no dio permiso"); }
+      });
+      $("descargas-nar").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        botonDescarga("Informe completo (PDF)", () => ["/api/diagnostica/informe.pdf", parametros()]),
+        ...j.formatos.map((f) => botonDescarga(`Gráfico ${NOMBRES_EST[f] || f.toUpperCase()}`,
+          () => [`/api/diagnostica/figura.${f}`, { ...parametros(), figura: "narrativa", descargar: "1" }])),
+        copiar);
+      $("descargas-ind").replaceChildren(el("span", { class: "rotulo", text: "Descargar:" }),
+        ...j.formatos.map((f) => botonDescarga(`Figura ${NOMBRES_EST[f] || f.toUpperCase()}`,
+          () => [`/api/diagnostica/figura.${f}`, { ...parametros(), figura: "indicadores", descargar: "1" }])),
+        botonDescarga("Tabla (CSV)", () => ["/api/diagnostica/indicadores.csv", parametros()]));
+    }
+
+    $("diag-cabecera").replaceChildren(el("tr", {}, el("th", { text: "Sesión" }), el("th", { class: "num", text: "Muestras" }),
+      ...j.indicadores.map((i) => el("th", { class: "num", text: `${i.nombre} (${i.unidad})` }))));
+    $("diag-tabla").replaceChildren(...j.por_sesion.map((x) => el("tr", {},
+      el("td", {}, el("code", { class: "lit", style: "white-space:nowrap;word-break:normal", text: x.sesion_id })),
+      el("td", { class: "num", text: fmt(x.n) }), ...j.indicadores.map((i) => el("td", { class: "num", text: celda(x[i.clave]) })))));
+  }
 
   // ---------- Análisis descriptivo (4.3) ----------
   const NOMBRES_EST = { png: "PNG (300 ppp)", svg: "SVG (editable)", pdf: "PDF" };

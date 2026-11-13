@@ -147,6 +147,56 @@ estadistica:
     serie_fila: [12.0, 2.3]      # alto por sesión
     reporte_pagina: [11.0, 8.5]  # carta horizontal
 
+# Analítica diagnóstica (sección 4.4 de la web): indicadores y narración de datos.
+diagnostica:
+  # La narración elige sus palabras con estos umbrales (no inventa: cada frase sale de un número).
+  narracion:
+    tiempo_correcto_alto: 90     # % BIEN desde el que se dice "la mayor parte del tiempo"
+    tiempo_correcto_medio: 70    # % BIEN por debajo del cual se habla de un problema relevante
+    alertas_hora_altas: 20       # episodios MAL por hora desde los que se dicen "frecuentes"
+    duracion_corta_s: 5          # un episodio MAL más corto se considera "corregido en segundos"
+    primera_alerta_temprana_min: 5
+    estabilidad_baja: 5          # |σ| (°) por debajo: postura estable
+    estabilidad_alta: 10         # |σ| (°) por encima: postura variable
+    desplazamiento_alto: 5       # |R| (°) desde el que la postura habitual se aleja del cero calibrado
+    movilidad_baja: 0.5          # °/s por debajo: postura estática
+    movilidad_alta: 5            # °/s por encima: movimientos bruscos
+    margen_iso_pct: 5            # diferencia entre % BIEN y % zona óptima ISO que vale la pena contar
+    min_episodios_confiable: 10
+    min_minutos_confiable: 60
+  tamanos_pulgadas:
+    narrativa: [11.0, 5.6]
+    indicadores: [12.0, 7.2]
+
+# Confiabilidad y tasa de fallos (sección 4.5 de la web).
+# Dos lecturas de "fallo", elegibles en la página:
+#   dispositivo: pérdida de conexión, conexión fallida, hueco de datos o sesión sin cierre.
+#   postura:     cada episodio MAL (el "tiempo de reparación" es lo que tarda en volver a BIEN).
+confiabilidad:
+  ventana_s: 60                  # ventanas para Isolation Forest y regresión logística
+  min_muestras_ventana: 10
+  weibull:
+    min_fallos: 5                # fallos observados mínimos para ajustar la distribución
+    horizonte_min: 10            # proyección: probabilidad de fallar en los próximos N minutos
+  anomalias:
+    min_ventanas: 8
+    arboles: 200
+    semilla: 0                   # fija: el mismo archivo da siempre el mismo resultado
+    # Puntaje de anomalía de Isolation Forest (0 a 1; ~0,5 = normal). Desde estos valores:
+    severidad: {media: 0.55, alta: 0.62, critica: 0.70}
+  prediccion:
+    horizonte_s: 60              # "fallo inminente": empieza un fallo en los próximos N segundos
+    min_positivos: 5             # ventanas seguidas de un fallo, mínimas para entrenar
+    min_negativos: 5
+    pliegues: 5                  # validación cruzada
+    umbral_alerta: 0.5           # probabilidad desde la que se alerta riesgo de fallo
+    semilla: 0
+  tamanos_pulgadas:
+    weibull: [12.0, 5.2]
+    anomalias: [12.0, 5.6]
+    prediccion: [12.0, 5.2]
+    fallos: [12.0, 5.0]
+
 # Filtro previo: un archivo que no lo pasa se rechaza y NO se procesa.
 validacion:
   extensiones_permitidas: [.txt]

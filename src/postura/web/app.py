@@ -10,6 +10,20 @@ Rutas:
                                     histogramas, cajas, violin o series)
     POST /api/analizar/estadistica/reporte.pdf  reporte completo de varias páginas
     POST /api/analizar/estadistica.csv          tabla de estadísticos descriptivos
+    POST /api/diagnostica           indicadores descriptivos y narración de datos (JSON)
+    POST /api/diagnostica/figura.<formato>     figura (campo figura: narrativa o indicadores)
+    POST /api/diagnostica/informe.pdf          narración, figuras e indicadores en PDF
+    POST /api/diagnostica/indicadores.csv      indicadores por sesión
+    POST /api/confiabilidad/resumen            todo el análisis de confiabilidad (campo modo: dispositivo
+                                               o postura)
+    POST /api/confiabilidad/metricas           MTBF, MTTR, disponibilidad, tasa de fallos y lista de fallos
+    POST /api/confiabilidad/weibull            ajuste de Weibull y proyección
+    POST /api/confiabilidad/anomalias          ventanas con puntaje y severidad (Isolation Forest)
+    POST /api/confiabilidad/prediccion         riesgo de fallo inminente (regresión logística)
+    POST /api/confiabilidad/alertas            alertas ordenadas por severidad
+    POST /api/confiabilidad/figura.<formato>   figura (fallos, weibull, anomalias o prediccion)
+    POST /api/confiabilidad/informe.pdf        informe
+    POST /api/confiabilidad/fallos.csv         lista de fallos
     POST /api/densidad3d            superficie 3D del mapa de densidad (JSON, vista interactiva)
     POST /api/figura3d.<formato>    la misma superficie como imagen fija
     POST /api/ergonomia.<formato>   figura ergonómica ISO 11226 (campo figura: zonas,
@@ -40,13 +54,21 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
 from .. import ergonomia as erg
 from .. import estadistica as est
+from .. import confiabilidad as conf
+from .. import diagnostica as diag
+from .. import indicadores as ind
 from .. import parser as p
 from ..configuracion import cargar_configuracion, fusionar
-from ..figuras.densidad import TIPOS_MIME, exportar, figura_densidad, seleccion
+from ..figuras.densidad import TIPOS_MIME, _alcance, exportar, figura_densidad, seleccion
 from ..figuras.densidad3d import figura_densidad_3d, malla_3d
 from ..figuras.ergonomia import FIGURAS, figura_ergonomia
 from ..figuras.estadistica import FIGURAS as FIGURAS_EST
 from ..figuras.estadistica import figura_estadistica, reporte_pdf
+from ..figuras.confiabilidad import FIGURAS as FIGURAS_CONF
+from ..figuras.confiabilidad import figura_confiabilidad
+from ..figuras.confiabilidad import informe_pdf as informe_confiabilidad
+from ..figuras.diagnostica import FIGURAS as FIGURAS_DIAG
+from ..figuras.diagnostica import figura_diagnostica, informe_pdf
 from ..ingesta import ingerir_contenidos
 from ..modelo import ErrorEsquema, discrepancias, seleccion_analizable
 from ..sesiones import resolver_usuario
@@ -55,7 +77,7 @@ from ..validacion import validar_estructura
 ESTATICOS = Path(__file__).parent / "estatico"
 # Súbala cuando cambie la forma de la respuesta de /api/analizar; la página la compara
 # para avisar si quedó abierto un servidor viejo.
-VERSION_API = 8
+VERSION_API = 11
 _BLOQUEO_FIGURAS = threading.Lock()   # matplotlib no es seguro entre hilos
 
 
@@ -266,6 +288,122 @@ def crear_app(config: dict | None = None) -> Flask:
             r = figura_estadistica(mediciones, cfg, tipo, usuario=usuario, sesion=sesion)
             sufijo = _nombre_seguro(sesion or usuario or "completo")
             return _imagen(r.figura, formato, cfg, f"estadistica_{tipo}_{nombre_base}_{sufijo}")
+
+    def _diagnostica():
+        """(datos analizables del filtro, config, análisis, alcance, nombre base de descarga)."""
+        cfg, sesion, usuario = _filtros()
+        mediciones, nombre_base = _mediciones_subidas()
+        usuarios, sesiones = ([usuario] if usuario else None), ([sesion] if sesion else None)
+        datos, _, _ = seleccion(mediciones, cfg, usuarios, sesiones)
+        alcance = _alcance(usuarios, sesiones)
+        sufijo = _nombre_seguro(sesion or usuario or "completo")
+        return datos, cfg, diag.analisis(datos, cfg, alcance), alcance, f"{nombre_base}_{sufijo}"
+
+    @app.post("/api/diagnostica")
+    def diagnostica():
+        _, _, a, _, _ = _diagnostica()
+        return jsonify({**a, "formatos": formatos_est})
+
+    @app.post("/api/diagnostica/figura.<formato>")
+    def diagnostica_figura(formato: str):
+        if formato not in formatos_est:
+            abort(404, description=f"Formato no disponible: {formato} (use {', '.join(formatos_est)})")
+        tipo = request.form.get("figura") or "narrativa"
+        if tipo not in FIGURAS_DIAG:
+            abort(400, description=f"figura debe ser {', '.join(FIGURAS_DIAG)}")
+        datos, cfg, a, alcance, nombre = _diagnostica()
+        with _BLOQUEO_FIGURAS:
+            figura = figura_diagnostica(datos, cfg, a, tipo, alcance, con_titulo=request.form.get("titulo") != "0")
+            return _imagen(figura, formato, cfg, f"diagnostica_{tipo}_{nombre}")
+
+    @app.post("/api/diagnostica/informe.pdf")
+    def diagnostica_informe():
+        datos, cfg, a, alcance, nombre = _diagnostica()
+        with _BLOQUEO_FIGURAS:
+            contenido = informe_pdf(datos, cfg, a, alcance)
+        return Response(contenido, mimetype=TIPOS_MIME["pdf"], headers={
+            "Content-Disposition": f'attachment; filename="analitica_diagnostica_{nombre}.pdf"', "Cache-Control": "no-store"})
+
+    @app.post("/api/diagnostica/indicadores.csv")
+    def diagnostica_csv():
+        _, _, a, _, nombre = _diagnostica()
+        claves = [i["clave"] for i in ind.INDICADORES]
+        salida = io.StringIO()
+        w = csv.writer(salida)
+        w.writerow(["sesion_id", "usuario_id", "n", *claves])
+        w.writerow(["(selección completa)", "", a["total"]["n"], *[a["total"][k] for k in claves]])
+        for fila in a["por_sesion"]:
+            w.writerow([fila["sesion_id"], fila["usuario_id"], fila["n"], *[fila[k] for k in claves]])
+        return Response(salida.getvalue().encode("utf-8-sig"), mimetype="text/csv", headers={
+            "Content-Disposition": f'attachment; filename="indicadores_{nombre}.csv"'})
+
+    def _confiabilidad():
+        """(análisis, config, alcance, nombre base) con los archivos, filtros y modo del formulario."""
+        modo = request.form.get("modo") or "dispositivo"
+        if modo not in conf.MODOS:
+            abort(400, description=f"modo debe ser {' o '.join(conf.MODOS)}")
+        try:
+            resultado, cfg = _ingerir_subida()
+        except ErrorEsquema as error:
+            abort(400, description=f"No se pudo normalizar el registro: {error}")
+        if not resultado.parseos:
+            abort(400, description="Ninguno de los archivos es un registro válido del corrector.")
+        if request.form.get("incluir_sin_calibrar") in ("1", "true"):
+            cfg = fusionar(cfg, {"sesiones": {"incluir_sin_calibrar": True}})
+        sesion, usuario = request.form.get("sesion") or None, request.form.get("usuario") or None
+        nombres = [r.archivo for r in resultado.parseos]
+        nombre = _nombre_seguro(Path(nombres[0]).stem if len(nombres) == 1 else f"{len(nombres)}_archivos")
+        alcance = _alcance([usuario] if usuario else None, [sesion] if sesion else None)
+        sufijo = _nombre_seguro(sesion or usuario or "completo")
+        return conf.analisis(resultado, cfg, modo, usuario, sesion), cfg, alcance, f"{modo}_{nombre}_{sufijo}"
+
+    def _publico(a: dict) -> dict:
+        return {k: v for k, v in a.items() if not k.startswith("_")}
+
+    @app.post("/api/confiabilidad/resumen")
+    def confiabilidad_resumen():
+        a, _, alcance, _ = _confiabilidad()
+        return jsonify({**_publico(a), "alcance": alcance, "formatos": formatos_est})
+
+    @app.post("/api/confiabilidad/<parte>")
+    def confiabilidad_parte(parte: str):
+        partes = {"metricas": ("metricas", "por_sesion", "fallos"), "weibull": ("weibull",),
+                  "anomalias": ("anomalias",), "prediccion": ("prediccion",), "alertas": ("alertas",)}
+        if parte not in partes:
+            abort(404, description=f"Parte desconocida: {parte} (use resumen, {', '.join(partes)})")
+        a, _, alcance, _ = _confiabilidad()
+        return jsonify({"modo": a["modo"], "alcance": alcance, **{k: a[k] for k in partes[parte]}})
+
+    @app.post("/api/confiabilidad/figura.<formato>")
+    def confiabilidad_figura(formato: str):
+        if formato not in formatos_est:
+            abort(404, description=f"Formato no disponible: {formato} (use {', '.join(formatos_est)})")
+        tipo = request.form.get("figura") or "fallos"
+        if tipo not in FIGURAS_CONF:
+            abort(400, description=f"figura debe ser {', '.join(FIGURAS_CONF)}")
+        a, cfg, _, nombre = _confiabilidad()
+        with _BLOQUEO_FIGURAS:
+            return _imagen(figura_confiabilidad(a, tipo, cfg), formato, cfg, f"confiabilidad_{tipo}_{nombre}")
+
+    @app.post("/api/confiabilidad/informe.pdf")
+    def confiabilidad_informe():
+        a, cfg, alcance, nombre = _confiabilidad()
+        with _BLOQUEO_FIGURAS:
+            contenido = informe_confiabilidad(a, cfg, alcance)
+        return Response(contenido, mimetype=TIPOS_MIME["pdf"], headers={
+            "Content-Disposition": f'attachment; filename="confiabilidad_{nombre}.pdf"', "Cache-Control": "no-store"})
+
+    @app.post("/api/confiabilidad/fallos.csv")
+    def confiabilidad_csv():
+        a, _, _, nombre = _confiabilidad()
+        columnas = ["archivo", "sesion_id", "tipo", "reloj_min", "reparacion_s", "linea", "detalle"]
+        salida = io.StringIO()
+        w = csv.writer(salida)
+        w.writerow(columnas)
+        for f in a["fallos"]:
+            w.writerow([f[c] for c in columnas])
+        return Response(salida.getvalue().encode("utf-8-sig"), mimetype="text/csv", headers={
+            "Content-Disposition": f'attachment; filename="fallos_{nombre}.csv"'})
 
     @app.post("/api/densidad3d")
     def densidad_3d():

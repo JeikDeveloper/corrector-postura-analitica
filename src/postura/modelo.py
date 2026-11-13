@@ -16,6 +16,7 @@ TIPO_ESTADO = pd.CategoricalDtype(categories=ESTADOS, ordered=False)
 # Columna → tipo esperado. "str" admite object o el tipo string de pandas.
 ESQUEMA_MEDICIONES: dict[str, str] = {
     "archivo": "str",
+    "linea": "int32",                  # línea del archivo de origen (trazabilidad)
     "dispositivo": "str",
     "usuario_id": "str",
     "sesion_id": "str",

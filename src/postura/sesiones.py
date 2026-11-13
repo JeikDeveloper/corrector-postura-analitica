@@ -224,6 +224,7 @@ def construir(resultado: p.ResultadoParseo, config: dict) -> Reconstruccion:
             n_post += post
             filas_med.append({
                 "archivo": archivo,
+                "linea": ev.linea,
                 "dispositivo": s.dispositivo,
                 "usuario_id": usuario,
                 "sesion_id": sid,
